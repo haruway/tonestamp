@@ -1,0 +1,105 @@
+/*
+ * tokens.css — design tokens e os dois temas.
+ *
+ * Regra que não se quebra: estes tokens descrevem a INTERFACE.
+ * A cor de fundo da composição (o "Background color" do grid) é escolha
+ * artística do usuário, vive no estado da aplicação e NÃO é um token.
+ * Trocar o tema nunca pode mexer naquela cor.
+ *
+ * O tema é aplicado via [data-theme] no <html>, escrito antes da primeira
+ * pintura pelo script inline do index.html.
+ *
+ * Contraste conferido por scripts/contrast.mjs (mínimo AA, 4.5:1 pra texto).
+ */
+
+:root,
+[data-theme="dark"] {
+  /* superfícies */
+  --bg: #07070a;
+  --panel: #0e0e13;
+  --panel-2: #14141b;
+  --line: #26262f;
+
+  /* texto */
+  --ink: #f2f2f5;
+  --dim: #7a7a88;
+
+  /* acentos */
+  --acid: #c8ff2e;
+  --acid-hover: #d9ff5c;
+  --hot: #ff2ea8;
+  --on-accent: #07070a;
+  --on-hot: #ffffff;
+
+  /* detalhes do stage */
+  --stage-grid: rgba(255, 255, 255, 0.022);
+  --stage-glow: rgba(200, 255, 46, 0.03);
+  --stage-shadow: 0 30px 80px -20px #000;
+  --drop-veil: rgba(7, 7, 10, 0.92);
+
+  /* forma */
+  --r: 2px;
+}
+
+[data-theme="light"] {
+  /* off-white levemente quente: cinza chapado achata a interface inteira */
+  --bg: #f2f1ec;
+  --panel: #faf9f6;
+  --panel-2: #efeee9;
+  --line: #cbc9bf;
+
+  --ink: #0d0d11;
+  --dim: #61616e;
+
+  /* o acid #c8ff2e dá 1.12:1 sobre fundo claro, ilegível.
+     #5a7000 é o tom mais alto da mesma família que ainda passa
+     AA sobre --panel (5.32:1) e sobre --panel-2 (4.82:1). */
+  --acid: #5a7000;
+  --acid-hover: #465900;
+  --hot: #c00074;
+  --on-accent: #ffffff;
+  --on-hot: #ffffff;
+
+  --stage-grid: rgba(13, 13, 17, 0.05);
+  --stage-glow: rgba(90, 112, 0, 0.05);
+  --stage-shadow: 0 24px 60px -24px rgba(13, 13, 17, 0.45);
+  --drop-veil: rgba(242, 241, 236, 0.93);
+}
+
+/* Transição só nas cores de superfície, 150ms, na troca de tema.
+   Nada de transicionar tudo: sliders e canvas não podem lagar. */
+:root {
+  --theme-t: 150ms;
+}
+
+body,
+#panel,
+#stage,
+.sec,
+.head,
+.state,
+button,
+.btn,
+.icon-btn,
+.mini,
+input[type="range"],
+.seg {
+  transition:
+    background-color var(--theme-t) linear,
+    border-color var(--theme-t) linear,
+    color var(--theme-t) linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --theme-t: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
