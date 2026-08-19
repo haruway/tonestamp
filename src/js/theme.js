@@ -9,7 +9,7 @@
  * da primeira pintura. Este módulo cuida do resto do ciclo de vida.
  */
 
-const STORAGE_KEY = 'svgdither:theme';
+const STORAGE_KEY = 'tonestamp:theme';
 const THEMES = ['dark', 'light'];
 
 /** @returns {'dark'|'light'} */

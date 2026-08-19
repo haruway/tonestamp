@@ -1,16 +1,16 @@
-# SVG Dither
+# Tonestamp
 
-Tonal dithering that reads the luminance of each grid cell and replaces it with a custom SVG shape. One HTML file, no install, no server, no build step.
+Tonal halftone that reads the luminance of each grid cell and stamps a custom SVG shape in its place. One HTML file, no install, no server, no build step.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/demo-github%20pages-c8ff2e.svg)](https://danilomariani.github.io/svg-dither/)
+[![GitHub Pages](https://img.shields.io/badge/demo-github%20pages-c8ff2e.svg)](https://haruway.github.io/tonestamp/)
 
 <!--
   DEMO GIF GOES HERE — see docs/assets/README.md for the shot list.
-  ![SVG Dither in action](docs/assets/demo.gif)
+  ![Tonestamp in action](docs/assets/demo.gif)
 -->
 
-**[Live demo →](https://danilomariani.github.io/svg-dither/)**
+**[Live demo →](https://haruway.github.io/tonestamp/)**
 
 ---
 
@@ -63,8 +63,8 @@ The full reasoning, the three scale strategies that work, and the Illustrator ex
 ## Development
 
 ```bash
-git clone https://github.com/danilomariani/svg-dither.git
-cd svg-dither
+git clone https://github.com/haruway/tonestamp.git
+cd tonestamp
 
 npm run serve      # serve src/ at :8080 — ES modules need HTTP, not file://
 npm run build      # inline src/ into dist/index.html

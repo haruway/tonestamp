@@ -1,7 +1,7 @@
 {
-  "name": "svg-dither",
+  "name": "tonestamp",
   "version": "1.0.0",
-  "description": "Tonal dithering that maps image luminance onto seven custom SVG shapes. Single HTML file, no install.",
+  "description": "Tonal halftone that maps image luminance onto seven custom SVG shapes. Single HTML file, no install.",
   "license": "MIT",
   "author": "Danilo Mariani",
   "type": "module",

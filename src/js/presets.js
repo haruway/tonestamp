@@ -14,7 +14,7 @@ import { S, slots, N, setPalette, emit } from './state.js';
 /** Versão do formato. Suba quando a forma do JSON mudar de maneira incompatível. */
 export const PRESET_VERSION = 1;
 
-const FORMAT_ID = 'svg-dither-preset';
+const FORMAT_ID = 'tonestamp-preset';
 
 /**
  * Faixa válida de cada parâmetro numérico, espelhando os sliders da interface.
@@ -72,7 +72,7 @@ export function downloadPreset(palette) {
   const json = JSON.stringify(buildPreset(palette), null, 2);
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   const a = document.createElement('a');
-  a.download = 'svg-dither-preset-' + Date.now() + '.json';
+  a.download = 'tonestamp-preset-' + Date.now() + '.json';
   a.href = url;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
@@ -97,7 +97,7 @@ export function parsePreset(text) {
     return { ok: false, error: 'o arquivo não descreve um preset' };
   }
   if (obj.format !== FORMAT_ID) {
-    return { ok: false, error: 'este JSON não é um preset do SVG Dither' };
+    return { ok: false, error: 'este JSON não é um preset do Tonestamp' };
   }
 
   const version = Number(obj.version);

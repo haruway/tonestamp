@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SVG Dither — 7-state tonal mapping</title>
-<meta name="description" content="Dithering por mapeamento tonal em 7 estados. Roda offline no navegador, sem instalação.">
+<title>Tonestamp — meio-tom tonal em 7 estados</title>
+<meta name="description" content="Meio-tom por mapeamento tonal em 7 estados. Roda offline no navegador, sem instalação.">
 <meta name="color-scheme" content="dark light">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +22,7 @@
 <script>
 (function(){
   try{
-    var saved = localStorage.getItem('svgdither:theme');
+    var saved = localStorage.getItem('tonestamp:theme');
     if(saved !== 'light' && saved !== 'dark'){
       saved = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     }
@@ -34,7 +34,7 @@
 <body>
 
 <main id="stage">
-  <div id="stageTag">SVG DITHER <b id="tagInfo">— sem fonte</b></div>
+  <div id="stageTag">TONESTAMP <b id="tagInfo">— sem fonte</b></div>
 
   <canvas id="out" width="900" height="900" role="img"
           aria-label="Resultado do dithering. Pré-visualização da imagem processada."></canvas>
@@ -53,7 +53,7 @@
   <div class="head">
     <div class="head-top">
       <div>
-        <h1>SVG <span>Dither</span></h1>
+        <h1>Tone<span>stamp</span></h1>
         <p>Mapeamento tonal em 7 estados</p>
       </div>
       <button id="themeToggle" class="icon-btn" type="button"

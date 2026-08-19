@@ -21,7 +21,7 @@ preset — ou o contrário, tanto faz.
 
 ```jsonc
 {
-  "format": "svg-dither-preset",  // recusado se for outra coisa
+  "format": "tonestamp-preset",  // recusado se for outra coisa
   "version": 1,                   // recusado se for maior que a build entende
   "created": "2026-08-19T00:00:00.000Z",
   "params": { /* todos os campos de S */ },

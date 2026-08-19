@@ -13,8 +13,8 @@ Please do not open a PR that adds React, Vue, Svelte, Tailwind, a state manager,
 ## Setup
 
 ```bash
-git clone https://github.com/danilomariani/svg-dither.git
-cd svg-dither
+git clone https://github.com/haruway/tonestamp.git
+cd tonestamp
 
 npm run serve      # http://localhost:8080 — required, see below
 npm run build      # regenerate dist/index.html

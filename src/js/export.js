@@ -22,7 +22,7 @@ export function init(canvas) {
 
 /** Nome de arquivo com timestamp, pra não sobrescrever download anterior. */
 function filename(ext) {
-  return 'svg-dither-' + Date.now() + '.' + ext;
+  return 'tonestamp-' + Date.now() + '.' + ext;
 }
 
 /**

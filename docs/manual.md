@@ -1,4 +1,4 @@
-# SVG Dither — manual da ferramenta
+# Tonestamp — manual da ferramenta
 
 Ferramenta de dithering por mapeamento tonal em 7 estados. Arquivo HTML único, roda offline no navegador, sem instalação e sem servidor. Abre com duplo clique.
 
@@ -160,7 +160,7 @@ Tem quatro exemplos prontos em [`examples/`](../examples/), um pra cada combina�
 
 ## Tema da interface
 
-Botão no canto superior direito do painel. Dois temas, escuro (padrão) e claro. A escolha fica salva em `localStorage` sob a chave `svgdither:theme`. Na primeira visita a ferramenta segue a preferência do sistema operacional.
+Botão no canto superior direito do painel. Dois temas, escuro (padrão) e claro. A escolha fica salva em `localStorage` sob a chave `tonestamp:theme`. Na primeira visita a ferramenta segue a preferência do sistema operacional.
 
 **O tema é só da interface.** Ele não encosta no *Background color* do grid. Aquilo é decisão de composição, é sua, e continua igual quando você troca de tema — inclusive é comum trabalhar com interface clara e composição de fundo preto.
 

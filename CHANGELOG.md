@@ -11,7 +11,7 @@ mudar o comportamento de nenhum controle existente.
 ### Adicionado
 
 - **Sistema de temas.** Escuro (padrão) e claro, alternados por botão no topo do
-  painel, persistidos em `localStorage` sob `svgdither:theme`. Na primeira visita
+  painel, persistidos em `localStorage` sob `tonestamp:theme`. Na primeira visita
   segue `prefers-color-scheme`. Transição de 150ms, respeitando
   `prefers-reduced-motion`. O tema é da interface e não encosta na cor de fundo
   da composição.
@@ -87,4 +87,4 @@ mudar o comportamento de nenhum controle existente.
 - O README ainda não tem GIF de demonstração nem capturas. A lista do que gravar
   está em `docs/assets/README.md`.
 
-[1.0.0]: https://github.com/danilomariani/svg-dither/releases/tag/v1.0.0
+[1.0.0]: https://github.com/haruway/tonestamp/releases/tag/v1.0.0
