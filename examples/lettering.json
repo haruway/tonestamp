@@ -1,0 +1,71 @@
+{
+  "format": "svg-dither-preset",
+  "version": 1,
+  "created": "2026-08-19T00:00:00.000Z",
+  "params": {
+    "cols": 34,
+    "bg": "#0d0d0d",
+    "fill": true,
+    "invert": false,
+    "scale": false,
+    "minS": 30,
+    "maxS": 100,
+    "rot": true,
+    "rotInt": 1600,
+    "bri": 0,
+    "con": 25,
+    "gam": 1,
+    "res": 1440,
+    "square": false,
+    "playing": true,
+    "cmode": "state",
+    "palN": 5,
+    "sat": 0,
+    "autoPal": true
+  },
+  "states": [
+    {
+      "on": true,
+      "color": "#ffffff",
+      "name": "tres-aneis.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 8a38 38 0 1 0 0 76 38 38 0 0 0 0-76ZM50 20a30 30 0 1 1 0 60 30 30 0 0 1 0-60Zm0 8a22 22 0 1 0 0 44 22 22 0 0 0 0-44ZM50 38a12 12 0 1 1 0 24 12 12 0 0 1 0-24Z\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#f2f2f5",
+      "name": "dois-aneis.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 8a38 38 0 1 0 0 76 38 38 0 0 0 0-76ZM50 22a28 28 0 1 1 0 56 28 28 0 0 1 0-56Zm0 8a20 20 0 1 0 0 40 20 20 0 0 0 0-40Z\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#e6e6ea",
+      "name": "anel-ponto.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 8a38 38 0 1 0 0 76 38 38 0 0 0 0-76ZM50 36a14 14 0 1 1 0 28 14 14 0 0 1 0-28Z\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#d5d5dc",
+      "name": "anel.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 8a38 38 0 1 0 0 76 38 38 0 0 0 0-76Z\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#bcbcc6",
+      "name": "cruz.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" d=\"M8 44.5h84v11h-84Z M44.5 8h11v84h-11Z\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#9a9aa6",
+      "name": "barra.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"8\" y=\"44.5\" width=\"84\" height=\"11\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": false,
+      "color": "#ffffff",
+      "name": "ponto.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"8\" fill=\"#fff\"/></svg>"
+    }
+  ],
+  "palette": []
+}

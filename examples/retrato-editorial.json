@@ -1,0 +1,71 @@
+{
+  "format": "svg-dither-preset",
+  "version": 1,
+  "created": "2026-08-19T00:00:00.000Z",
+  "params": {
+    "cols": 90,
+    "bg": "#0d0d0d",
+    "fill": true,
+    "invert": false,
+    "scale": true,
+    "minS": 15,
+    "maxS": 105,
+    "rot": false,
+    "rotInt": 400,
+    "bri": 0,
+    "con": 0,
+    "gam": 0.85,
+    "res": 1440,
+    "square": false,
+    "playing": true,
+    "cmode": "state",
+    "palN": 5,
+    "sat": 0,
+    "autoPal": true
+  },
+  "states": [
+    {
+      "on": true,
+      "color": "#ffffff",
+      "name": "circulo-r46.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"46\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#ffffff",
+      "name": "circulo-r38.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"38\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#ffffff",
+      "name": "circulo-r30.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"30\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#ffffff",
+      "name": "circulo-r22.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"22\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#ffffff",
+      "name": "circulo-r16.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"16\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#ffffff",
+      "name": "circulo-r10.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"10\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#ffffff",
+      "name": "circulo-r5.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"#fff\"/></svg>"
+    }
+  ],
+  "palette": []
+}

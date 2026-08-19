@@ -1,0 +1,87 @@
+{
+  "format": "svg-dither-preset",
+  "version": 1,
+  "created": "2026-08-19T00:00:00.000Z",
+  "params": {
+    "cols": 55,
+    "bg": "#160a1a",
+    "fill": true,
+    "invert": false,
+    "scale": false,
+    "minS": 30,
+    "maxS": 92,
+    "rot": false,
+    "rotInt": 400,
+    "bri": 0,
+    "con": 0,
+    "gam": 1,
+    "res": 2040,
+    "square": false,
+    "playing": true,
+    "cmode": "quant",
+    "palN": 3,
+    "sat": 70,
+    "autoPal": true
+  },
+  "states": [
+    {
+      "on": true,
+      "color": "#f4e9d8",
+      "name": "quadrado-92.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"4\" y=\"4\" width=\"92\" height=\"92\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#f0c419",
+      "name": "circulo-r46.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"46\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#e8622a",
+      "name": "quadrado-68.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"16\" y=\"16\" width=\"68\" height=\"68\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#c1123f",
+      "name": "circulo-r32.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"32\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#7a0f3d",
+      "name": "quadrado-44.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"28\" y=\"28\" width=\"44\" height=\"44\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#3d1030",
+      "name": "circulo-r18.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"18\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#160a1a",
+      "name": "quadrado-18.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"41\" y=\"41\" width=\"18\" height=\"18\" fill=\"#fff\"/></svg>"
+    }
+  ],
+  "palette": [
+    [
+      244,
+      233,
+      216
+    ],
+    [
+      232,
+      98,
+      42
+    ],
+    [
+      61,
+      16,
+      48
+    ]
+  ]
+}
