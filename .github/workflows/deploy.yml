@@ -1,0 +1,74 @@
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Só o necessário: ler o repo, publicar no Pages, e o token OIDC que o
+# deploy-pages exige.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Um deploy por vez. Não cancela o que já está rodando — publicação pela
+# metade é pior que esperar.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Não existe `npm install`: o projeto é zero-dependência por decisão de
+      # produto, e o build é Node puro.
+
+      - name: Verificar se o dist commitado está em dia
+        run: |
+          node scripts/build.mjs --check || {
+            echo ""
+            echo "::error::dist/index.html está desatualizado em relação a src/."
+            echo "Rode 'node scripts/build.mjs' localmente e faça commit do resultado"
+            echo "junto com a mudança em src/. O dist é versionado de propósito:"
+            echo "quem baixa o arquivo direto do GitHub tem que receber o build atual."
+            exit 1
+          }
+
+      - name: Conferir contraste dos temas
+        run: node scripts/contrast.mjs
+
+      - name: Gerar o build
+        run: node scripts/build.mjs
+
+      - name: Garantir que o build é determinístico
+        run: |
+          git diff --exit-code -- dist/ || {
+            echo ""
+            echo "::error::rodar o build duas vezes produziu arquivos diferentes."
+            echo "Algo no build.mjs não é determinístico (timestamp? ordem de Map?)."
+            exit 1
+          }
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
