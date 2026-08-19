@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SVG Dither — 7-state tonal mapping</title>
+<meta name="description" content="Dithering por mapeamento tonal em 7 estados. Roda offline no navegador, sem instalação.">
+<meta name="color-scheme" content="dark light">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/components.css">
+
+<!--
+  Boot do tema antes da primeira pintura, pra não piscar o tema errado.
+  Precisa ser inline e síncrono: um módulo externo carregaria tarde demais.
+-->
+<script>
+(function(){
+  try{
+    var saved = localStorage.getItem('svgdither:theme');
+    if(saved !== 'light' && saved !== 'dark'){
+      saved = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', saved);
+  }catch(e){ /* localStorage bloqueado: fica no dark do atributo */ }
+})();
+</script>
+</head>
+<body>
+
+<main id="stage">
+  <div id="stageTag">SVG DITHER <b id="tagInfo">— sem fonte</b></div>
+
+  <canvas id="out" width="900" height="900" role="img"
+          aria-label="Resultado do dithering. Pré-visualização da imagem processada."></canvas>
+
+  <div id="hint">
+    <span>Arraste imagem ou vídeo pra cá</span>
+    <span id="fps" role="status" aria-live="off"></span>
+    <span id="perfWarn" class="warn" hidden>grid alto com vídeo derruba o fps</span>
+  </div>
+
+  <div id="drop" aria-hidden="true">SOLTA AQUI</div>
+</main>
+
+<aside id="panel" aria-label="Controles">
+
+  <div class="head">
+    <div class="head-top">
+      <div>
+        <h1>SVG <span>Dither</span></h1>
+        <p>Mapeamento tonal em 7 estados</p>
+      </div>
+      <button id="themeToggle" class="icon-btn" type="button"
+              aria-label="Alternar para tema claro" title="Alternar tema">
+        <span class="icon-btn-glyph" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+
+  <section class="sec" aria-labelledby="h-fonte">
+    <h2 id="h-fonte">Fonte</h2>
+    <div class="row3" style="margin-bottom:10px">
+      <button id="bImg" type="button">Imagem</button>
+      <button id="bVid" type="button">Vídeo</button>
+      <button id="bCam" type="button">Webcam</button>
+    </div>
+    <input type="file" id="fImg" accept="image/*" class="vh" tabindex="-1" aria-hidden="true">
+    <input type="file" id="fVid" accept="video/*" class="vh" tabindex="-1" aria-hidden="true">
+    <div class="row">
+      <button id="bRatio" type="button" aria-pressed="false">Proporção: original</button>
+      <button id="bPlay" type="button">Pausar</button>
+    </div>
+    <p class="note srcmsg" id="srcMsg" role="status" hidden></p>
+  </section>
+
+  <section class="sec" aria-labelledby="h-grid">
+    <h2 id="h-grid">Grid</h2>
+    <label class="f" for="rCols">
+      <span class="lb">Grid resolution (scale) <b id="vCols">80</b></span>
+      <input type="range" id="rCols" min="8" max="220" value="80">
+    </label>
+    <label class="f" for="cBg">
+      <span class="lb">Background color</span>
+      <input type="color" id="cBg" value="#000000">
+    </label>
+    <label class="chk"><input type="checkbox" id="kFill" checked><span>Fill SVG shapes (solid)</span></label>
+    <label class="chk"><input type="checkbox" id="kInv"><span>Quick invert mapping</span></label>
+  </section>
+
+  <section class="sec" aria-labelledby="h-states">
+    <h2 id="h-states">7-state midtone mapping</h2>
+    <div id="states"></div>
+    <div class="row" style="margin-top:10px">
+      <button id="bAllWhite" type="button">Tudo branco</button>
+      <button id="bReset" type="button">Shapes padrão</button>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-cor">
+    <h2 id="h-cor">Cor</h2>
+    <div class="seg" role="group" aria-label="Modo de cor" style="margin-bottom:12px">
+      <button id="mState" type="button" class="on" aria-pressed="true">Estado</button>
+      <button id="mPixel" type="button" aria-pressed="false">Pixel</button>
+      <button id="mQuant" type="button" aria-pressed="false">Quantizar</button>
+    </div>
+    <p class="note" id="modeNote" role="status" style="margin-bottom:14px">
+      Cor fixa por faixa tonal. A shape e a cor vêm do brilho.
+    </p>
+    <label class="f" for="rPal">
+      <span class="lb">Cores na paleta <b id="vPal">5</b></span>
+      <input type="range" id="rPal" min="2" max="8" value="5">
+    </label>
+    <div id="swatches" aria-label="Paleta extraída"><span id="swEmpty">Nenhuma paleta extraída</span></div>
+    <div class="row" style="margin-bottom:8px">
+      <button id="bExtract" type="button">Extrair da imagem</button>
+      <button id="bApply" type="button">Aplicar nos estados</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="kAuto" checked><span>Extrair ao trocar de fonte</span></label>
+    <label class="f" for="rSat" style="margin-top:14px">
+      <span class="lb">Saturação <b id="vSat">0</b></span>
+      <input type="range" id="rSat" min="-100" max="100" value="0">
+    </label>
+  </section>
+
+  <section class="sec" aria-labelledby="h-escala">
+    <h2 id="h-escala">Escala e rotação</h2>
+    <label class="chk"><input type="checkbox" id="kScale"><span>Scale shapes with midtones</span></label>
+    <label class="f" for="rMin">
+      <span class="lb">Min size (%) <b id="vMin">30</b></span>
+      <input type="range" id="rMin" min="0" max="100" value="30">
+    </label>
+    <label class="f" for="rMax">
+      <span class="lb">Max size (%) <b id="vMax">100</b></span>
+      <input type="range" id="rMax" min="0" max="140" value="100">
+    </label>
+    <label class="chk"><input type="checkbox" id="kRot"><span>Enable 90° snap rotation</span></label>
+    <label class="f" for="rRot">
+      <span class="lb">Rotation interval <b id="vRot">400ms</b></span>
+      <input type="range" id="rRot" min="40" max="2000" step="20" value="400">
+    </label>
+    <p class="note">Lower = faster.</p>
+  </section>
+
+  <section class="sec" aria-labelledby="h-tom">
+    <h2 id="h-tom">Tom</h2>
+    <label class="f" for="rBri">
+      <span class="lb">Brilho <b id="vBri">0</b></span>
+      <input type="range" id="rBri" min="-100" max="100" value="0">
+    </label>
+    <label class="f" for="rCon">
+      <span class="lb">Contraste <b id="vCon">0</b></span>
+      <input type="range" id="rCon" min="-100" max="100" value="0">
+    </label>
+    <label class="f" for="rGam">
+      <span class="lb">Gamma <b id="vGam">1.00</b></span>
+      <input type="range" id="rGam" min="30" max="300" value="100">
+    </label>
+  </section>
+
+  <section class="sec" aria-labelledby="h-export">
+    <h2 id="h-export">Exportar</h2>
+    <label class="f" for="rRes">
+      <span class="lb">Resolução de saída <b id="vRes">1440px</b></span>
+      <input type="range" id="rRes" min="600" max="3000" step="60" value="1440">
+    </label>
+    <div class="row" style="margin-bottom:8px">
+      <button class="pri" id="bPng" type="button">PNG</button>
+      <button id="bSvg" type="button">SVG</button>
+    </div>
+    <button class="rec" id="bRec" type="button" aria-pressed="false">Gravar WebM</button>
+    <p class="note" style="margin-top:12px">
+      Export SVG só sai com as shapes reais quando você sobe seus próprios arquivos.
+    </p>
+  </section>
+
+  <section class="sec" aria-labelledby="h-presets">
+    <h2 id="h-presets">Presets</h2>
+    <div class="row">
+      <button id="bSavePreset" type="button">Salvar preset</button>
+      <button id="bLoadPreset" type="button">Carregar preset</button>
+    </div>
+    <input type="file" id="fPreset" accept="application/json,.json" class="vh" tabindex="-1" aria-hidden="true">
+    <p class="note msg" id="presetMsg" role="status" hidden></p>
+    <p class="note" style="margin-top:12px">
+      O preset guarda tudo, inclusive as shapes que você subiu. É um <b>.json</b> portátil.
+    </p>
+  </section>
+
+  <section class="sec" style="border-bottom:none">
+    <p class="note">
+      <b>Fluxo:</b> desenha a shape → exporta SVG de cor única → sobe no estado que quiser →
+      ajusta grid, cor e escala. Estado 1 é highlight, estado 7 é sombra.
+      Desmarcar um estado deixa aquela faixa tonal vazia.
+    </p>
+  </section>
+
+</aside>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
