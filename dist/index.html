@@ -1,0 +1,3267 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<!--
+  Build único gerado por scripts/build.mjs a partir de src/.
+  Não edite este arquivo: as mudanças se perdem no próximo build.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SVG Dither — 7-state tonal mapping</title>
+<meta name="description" content="Dithering por mapeamento tonal em 7 estados. Roda offline no navegador, sem instalação.">
+<meta name="color-scheme" content="dark light">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ---------- styles/tokens.css ---------- */
+/*
+ * tokens.css — design tokens e os dois temas.
+ *
+ * Regra que não se quebra: estes tokens descrevem a INTERFACE.
+ * A cor de fundo da composição (o "Background color" do grid) é escolha
+ * artística do usuário, vive no estado da aplicação e NÃO é um token.
+ * Trocar o tema nunca pode mexer naquela cor.
+ *
+ * O tema é aplicado via [data-theme] no <html>, escrito antes da primeira
+ * pintura pelo script inline do index.html.
+ *
+ * Contraste conferido por scripts/contrast.mjs (mínimo AA, 4.5:1 pra texto).
+ */
+
+:root,
+[data-theme="dark"] {
+  /* superfícies */
+  --bg: #07070a;
+  --panel: #0e0e13;
+  --panel-2: #14141b;
+  --line: #26262f;
+
+  /* texto */
+  --ink: #f2f2f5;
+  --dim: #7a7a88;
+
+  /* acentos */
+  --acid: #c8ff2e;
+  --acid-hover: #d9ff5c;
+  --hot: #ff2ea8;
+  --on-accent: #07070a;
+  --on-hot: #ffffff;
+
+  /* detalhes do stage */
+  --stage-grid: rgba(255, 255, 255, 0.022);
+  --stage-glow: rgba(200, 255, 46, 0.03);
+  --stage-shadow: 0 30px 80px -20px #000;
+  --drop-veil: rgba(7, 7, 10, 0.92);
+
+  /* forma */
+  --r: 2px;
+}
+
+[data-theme="light"] {
+  /* off-white levemente quente: cinza chapado achata a interface inteira */
+  --bg: #f2f1ec;
+  --panel: #faf9f6;
+  --panel-2: #efeee9;
+  --line: #cbc9bf;
+
+  --ink: #0d0d11;
+  --dim: #61616e;
+
+  /* o acid #c8ff2e dá 1.12:1 sobre fundo claro, ilegível.
+     #5a7000 é o tom mais alto da mesma família que ainda passa
+     AA sobre --panel (5.32:1) e sobre --panel-2 (4.82:1). */
+  --acid: #5a7000;
+  --acid-hover: #465900;
+  --hot: #c00074;
+  --on-accent: #ffffff;
+  --on-hot: #ffffff;
+
+  --stage-grid: rgba(13, 13, 17, 0.05);
+  --stage-glow: rgba(90, 112, 0, 0.05);
+  --stage-shadow: 0 24px 60px -24px rgba(13, 13, 17, 0.45);
+  --drop-veil: rgba(242, 241, 236, 0.93);
+}
+
+/* Transição só nas cores de superfície, 150ms, na troca de tema.
+   Nada de transicionar tudo: sliders e canvas não podem lagar. */
+:root {
+  --theme-t: 150ms;
+}
+
+body,
+#panel,
+#stage,
+.sec,
+.head,
+.state,
+button,
+.btn,
+.icon-btn,
+.mini,
+input[type="range"],
+.seg {
+  transition:
+    background-color var(--theme-t) linear,
+    border-color var(--theme-t) linear,
+    color var(--theme-t) linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --theme-t: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+<style>
+/* ---------- styles/base.css ---------- */
+/*
+ * base.css — reset, tipografia, layout global e o stage.
+ * Nada aqui conhece componente específico do painel.
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: 1fr 372px;
+  overflow: hidden;
+}
+
+/* utilitário: esconde do olho, mantém pro leitor de tela / clique programático */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* foco visível em qualquer coisa focável, sem exceção */
+:focus-visible {
+  outline: 2px solid var(--acid);
+  outline-offset: 2px;
+}
+
+/* ---------- stage ---------- */
+
+#stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  min-width: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, var(--stage-glow), transparent 40%),
+    repeating-linear-gradient(0deg, transparent 0 39px, var(--stage-grid) 39px 40px),
+    repeating-linear-gradient(90deg, transparent 0 39px, var(--stage-grid) 39px 40px);
+}
+
+#out {
+  max-width: 100%;
+  max-height: calc(100vh - 120px);
+  box-shadow: 0 0 0 1px var(--line), var(--stage-shadow);
+  display: block;
+}
+
+#stageTag {
+  position: absolute;
+  top: 18px;
+  left: 22px;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+#stageTag b {
+  color: var(--acid);
+  font-weight: 500;
+}
+
+#hint {
+  position: absolute;
+  bottom: 18px;
+  left: 22px;
+  right: 22px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  text-transform: uppercase;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+#hint .warn {
+  color: var(--hot);
+}
+
+#drop {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--drop-veil);
+  border: 1px dashed var(--acid);
+  z-index: 20;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+}
+
+#drop.on {
+  display: flex;
+}
+
+/* ---------- responsivo ---------- */
+
+@media (max-width: 900px) {
+  body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    overflow: auto;
+    height: auto;
+  }
+  #stage {
+    min-height: 60vh;
+  }
+  #out {
+    max-height: calc(60vh - 90px);
+  }
+}
+
+@media (max-width: 480px) {
+  #stage {
+    padding: 14px;
+    min-height: 52vh;
+  }
+  #stageTag {
+    top: 12px;
+    left: 14px;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+  }
+  #hint {
+    bottom: 12px;
+    left: 14px;
+    right: 14px;
+    gap: 10px;
+    font-size: 9px;
+  }
+  #out {
+    max-height: calc(52vh - 74px);
+  }
+  #drop {
+    font-size: 15px;
+  }
+}
+</style>
+<style>
+/* ---------- styles/components.css ---------- */
+/*
+ * components.css — painel, seções, controles de formulário,
+ * cards de estado, swatches e notas.
+ */
+
+/* ---------- painel ---------- */
+
+#panel {
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  height: 100vh;
+}
+
+#panel::-webkit-scrollbar {
+  width: 9px;
+}
+#panel::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+#panel::-webkit-scrollbar-thumb {
+  background: var(--line);
+}
+
+.head {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 5;
+}
+
+.head-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.head h1 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.head h1 span {
+  color: var(--acid);
+}
+
+.head p {
+  margin-top: 7px;
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* botão de tema: só ícone, quadrado, discreto */
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.icon-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* sol no tema claro, lua no escuro — desenhado em CSS, sem asset externo */
+.icon-btn-glyph {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+  position: relative;
+  display: block;
+}
+
+[data-theme="dark"] .icon-btn-glyph {
+  /* recorta um crescente */
+  box-shadow: inset -4px -2px 0 0 currentColor;
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+[data-theme="light"] .icon-btn-glyph::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.45;
+}
+
+/* ---------- seções ---------- */
+
+.sec {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sec > h2 {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+}
+
+.sec > h2::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: var(--acid);
+  flex: none;
+}
+
+/* ---------- campos ---------- */
+
+label.f {
+  display: block;
+  margin-bottom: 14px;
+}
+
+label.f:last-child {
+  margin-bottom: 0;
+}
+
+.lb {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 7px;
+}
+
+.lb b {
+  color: var(--acid);
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--line);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  background: var(--ink);
+  cursor: pointer;
+  border-radius: 50%;
+  border: 3px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  background: var(--ink);
+  cursor: pointer;
+  border-radius: 50%;
+  border: 3px solid var(--panel);
+}
+
+input[type="range"]:focus-visible {
+  outline: none;
+}
+
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--acid);
+}
+
+input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px var(--acid);
+}
+
+input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  background: none;
+  width: 100%;
+  height: 30px;
+  cursor: pointer;
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: 1px solid var(--line);
+}
+
+.chk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  user-select: none;
+}
+
+.chk:last-child {
+  margin-bottom: 0;
+}
+
+.chk input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--dim);
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+  position: relative;
+}
+
+.chk input:checked {
+  background: var(--acid);
+  border-color: var(--acid);
+}
+
+.chk input:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0.5px;
+  width: 4px;
+  height: 9px;
+  border: solid var(--on-accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.chk span {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ---------- botões ---------- */
+
+button,
+.btn {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 9px 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  display: block;
+  font-weight: 500;
+}
+
+button:hover,
+.btn:hover {
+  border-color: var(--ink);
+}
+
+button.pri {
+  background: var(--acid);
+  color: var(--on-accent);
+  border-color: var(--acid);
+  font-weight: 600;
+}
+
+button.pri:hover {
+  background: var(--acid-hover);
+  border-color: var(--acid-hover);
+}
+
+button.rec.on {
+  background: var(--hot);
+  border-color: var(--hot);
+  color: var(--on-hot);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.row3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+input[type="file"]:not(.vh) {
+  display: none;
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: 1px solid var(--line);
+}
+
+.seg button {
+  border: none;
+  border-right: 1px solid var(--line);
+  padding: 9px 4px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.seg button:last-child {
+  border-right: none;
+}
+
+.seg button.on {
+  background: var(--acid);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.seg button.on:hover {
+  background: var(--acid-hover);
+}
+
+/* ---------- swatches ---------- */
+
+#swatches {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0 10px;
+  min-height: 30px;
+}
+
+.sws {
+  flex: 1;
+  height: 30px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  position: relative;
+  padding: 0;
+  min-width: 0;
+}
+
+.sws:hover {
+  border-color: var(--ink);
+}
+
+#swEmpty {
+  color: var(--dim);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  align-self: center;
+}
+
+/* ---------- lista de estados ---------- */
+
+.state {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  padding: 8px 9px;
+  margin-bottom: 6px;
+}
+
+.state.off {
+  opacity: 0.35;
+}
+
+.state.err {
+  border-color: var(--hot);
+  opacity: 1;
+}
+
+.sw {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.sw input[type="color"] {
+  height: 30px;
+}
+
+.st-n {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.st-s {
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.st-a {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+/* mensagem de erro do estado, ocupa a linha inteira do card */
+.st-err {
+  grid-column: 1 / -1;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  color: var(--hot);
+  text-transform: uppercase;
+}
+
+.st-err[hidden] {
+  display: none;
+}
+
+.mini {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  color: var(--dim);
+}
+
+.mini:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.mini.has {
+  color: var(--acid);
+  border-color: var(--acid);
+}
+
+.mini[aria-pressed="false"] {
+  color: var(--dim);
+}
+
+.prev {
+  width: 26px;
+  height: 26px;
+  background: #000;
+  border: 1px solid var(--line);
+  flex: none;
+}
+
+/* ---------- notas e mensagens ---------- */
+
+.note {
+  font-size: 9.5px;
+  color: var(--dim);
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+}
+
+.note b {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.warn {
+  color: var(--hot);
+}
+
+.msg,
+.srcmsg {
+  margin-top: 10px;
+  border-left: 2px solid var(--line);
+  padding-left: 8px;
+}
+
+.msg.ok,
+.srcmsg.ok {
+  border-left-color: var(--acid);
+  color: var(--ink);
+}
+
+.msg.bad,
+.srcmsg.bad {
+  border-left-color: var(--hot);
+  color: var(--hot);
+}
+
+.msg[hidden],
+.srcmsg[hidden] {
+  display: none;
+}
+
+/* ---------- responsivo ---------- */
+
+@media (max-width: 900px) {
+  #panel {
+    height: auto;
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+  .head {
+    position: static;
+  }
+}
+
+@media (max-width: 480px) {
+  .sec {
+    padding: 16px 14px;
+  }
+  .head {
+    padding: 16px 14px 14px;
+  }
+  .row3 {
+    gap: 6px;
+  }
+  .row3 button {
+    padding: 9px 4px;
+    letter-spacing: 0.08em;
+  }
+  button,
+  .btn {
+    letter-spacing: 0.12em;
+  }
+  .state {
+    grid-template-columns: 26px 1fr auto;
+    gap: 8px;
+    padding: 8px;
+  }
+  .st-a {
+    gap: 4px;
+  }
+  .chk span {
+    letter-spacing: 0.1em;
+  }
+}
+</style>
+<!--
+  Boot do tema antes da primeira pintura, pra não piscar o tema errado.
+  Precisa ser inline e síncrono: um módulo externo carregaria tarde demais.
+-->
+<script>
+(function(){
+  try{
+    var saved = localStorage.getItem('svgdither:theme');
+    if(saved !== 'light' && saved !== 'dark'){
+      saved = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', saved);
+  }catch(e){ /* localStorage bloqueado: fica no dark do atributo */ }
+})();
+</script>
+</head>
+<body>
+
+<main id="stage">
+  <div id="stageTag">SVG DITHER <b id="tagInfo">— sem fonte</b></div>
+
+  <canvas id="out" width="900" height="900" role="img"
+          aria-label="Resultado do dithering. Pré-visualização da imagem processada."></canvas>
+
+  <div id="hint">
+    <span>Arraste imagem ou vídeo pra cá</span>
+    <span id="fps" role="status" aria-live="off"></span>
+    <span id="perfWarn" class="warn" hidden>grid alto com vídeo derruba o fps</span>
+  </div>
+
+  <div id="drop" aria-hidden="true">SOLTA AQUI</div>
+</main>
+
+<aside id="panel" aria-label="Controles">
+
+  <div class="head">
+    <div class="head-top">
+      <div>
+        <h1>SVG <span>Dither</span></h1>
+        <p>Mapeamento tonal em 7 estados</p>
+      </div>
+      <button id="themeToggle" class="icon-btn" type="button"
+              aria-label="Alternar para tema claro" title="Alternar tema">
+        <span class="icon-btn-glyph" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+
+  <section class="sec" aria-labelledby="h-fonte">
+    <h2 id="h-fonte">Fonte</h2>
+    <div class="row3" style="margin-bottom:10px">
+      <button id="bImg" type="button">Imagem</button>
+      <button id="bVid" type="button">Vídeo</button>
+      <button id="bCam" type="button">Webcam</button>
+    </div>
+    <input type="file" id="fImg" accept="image/*" class="vh" tabindex="-1" aria-hidden="true">
+    <input type="file" id="fVid" accept="video/*" class="vh" tabindex="-1" aria-hidden="true">
+    <div class="row">
+      <button id="bRatio" type="button" aria-pressed="false">Proporção: original</button>
+      <button id="bPlay" type="button">Pausar</button>
+    </div>
+    <p class="note srcmsg" id="srcMsg" role="status" hidden></p>
+  </section>
+
+  <section class="sec" aria-labelledby="h-grid">
+    <h2 id="h-grid">Grid</h2>
+    <label class="f" for="rCols">
+      <span class="lb">Grid resolution (scale) <b id="vCols">80</b></span>
+      <input type="range" id="rCols" min="8" max="220" value="80">
+    </label>
+    <label class="f" for="cBg">
+      <span class="lb">Background color</span>
+      <input type="color" id="cBg" value="#000000">
+    </label>
+    <label class="chk"><input type="checkbox" id="kFill" checked><span>Fill SVG shapes (solid)</span></label>
+    <label class="chk"><input type="checkbox" id="kInv"><span>Quick invert mapping</span></label>
+  </section>
+
+  <section class="sec" aria-labelledby="h-states">
+    <h2 id="h-states">7-state midtone mapping</h2>
+    <div id="states"></div>
+    <div class="row" style="margin-top:10px">
+      <button id="bAllWhite" type="button">Tudo branco</button>
+      <button id="bReset" type="button">Shapes padrão</button>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-cor">
+    <h2 id="h-cor">Cor</h2>
+    <div class="seg" role="group" aria-label="Modo de cor" style="margin-bottom:12px">
+      <button id="mState" type="button" class="on" aria-pressed="true">Estado</button>
+      <button id="mPixel" type="button" aria-pressed="false">Pixel</button>
+      <button id="mQuant" type="button" aria-pressed="false">Quantizar</button>
+    </div>
+    <p class="note" id="modeNote" role="status" style="margin-bottom:14px">
+      Cor fixa por faixa tonal. A shape e a cor vêm do brilho.
+    </p>
+    <label class="f" for="rPal">
+      <span class="lb">Cores na paleta <b id="vPal">5</b></span>
+      <input type="range" id="rPal" min="2" max="8" value="5">
+    </label>
+    <div id="swatches" aria-label="Paleta extraída"><span id="swEmpty">Nenhuma paleta extraída</span></div>
+    <div class="row" style="margin-bottom:8px">
+      <button id="bExtract" type="button">Extrair da imagem</button>
+      <button id="bApply" type="button">Aplicar nos estados</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="kAuto" checked><span>Extrair ao trocar de fonte</span></label>
+    <label class="f" for="rSat" style="margin-top:14px">
+      <span class="lb">Saturação <b id="vSat">0</b></span>
+      <input type="range" id="rSat" min="-100" max="100" value="0">
+    </label>
+  </section>
+
+  <section class="sec" aria-labelledby="h-escala">
+    <h2 id="h-escala">Escala e rotação</h2>
+    <label class="chk"><input type="checkbox" id="kScale"><span>Scale shapes with midtones</span></label>
+    <label class="f" for="rMin">
+      <span class="lb">Min size (%) <b id="vMin">30</b></span>
+      <input type="range" id="rMin" min="0" max="100" value="30">
+    </label>
+    <label class="f" for="rMax">
+      <span class="lb">Max size (%) <b id="vMax">100</b></span>
+      <input type="range" id="rMax" min="0" max="140" value="100">
+    </label>
+    <label class="chk"><input type="checkbox" id="kRot"><span>Enable 90° snap rotation</span></label>
+    <label class="f" for="rRot">
+      <span class="lb">Rotation interval <b id="vRot">400ms</b></span>
+      <input type="range" id="rRot" min="40" max="2000" step="20" value="400">
+    </label>
+    <p class="note">Lower = faster.</p>
+  </section>
+
+  <section class="sec" aria-labelledby="h-tom">
+    <h2 id="h-tom">Tom</h2>
+    <label class="f" for="rBri">
+      <span class="lb">Brilho <b id="vBri">0</b></span>
+      <input type="range" id="rBri" min="-100" max="100" value="0">
+    </label>
+    <label class="f" for="rCon">
+      <span class="lb">Contraste <b id="vCon">0</b></span>
+      <input type="range" id="rCon" min="-100" max="100" value="0">
+    </label>
+    <label class="f" for="rGam">
+      <span class="lb">Gamma <b id="vGam">1.00</b></span>
+      <input type="range" id="rGam" min="30" max="300" value="100">
+    </label>
+  </section>
+
+  <section class="sec" aria-labelledby="h-export">
+    <h2 id="h-export">Exportar</h2>
+    <label class="f" for="rRes">
+      <span class="lb">Resolução de saída <b id="vRes">1440px</b></span>
+      <input type="range" id="rRes" min="600" max="3000" step="60" value="1440">
+    </label>
+    <div class="row" style="margin-bottom:8px">
+      <button class="pri" id="bPng" type="button">PNG</button>
+      <button id="bSvg" type="button">SVG</button>
+    </div>
+    <button class="rec" id="bRec" type="button" aria-pressed="false">Gravar WebM</button>
+    <p class="note" style="margin-top:12px">
+      Export SVG só sai com as shapes reais quando você sobe seus próprios arquivos.
+    </p>
+  </section>
+
+  <section class="sec" aria-labelledby="h-presets">
+    <h2 id="h-presets">Presets</h2>
+    <div class="row">
+      <button id="bSavePreset" type="button">Salvar preset</button>
+      <button id="bLoadPreset" type="button">Carregar preset</button>
+    </div>
+    <input type="file" id="fPreset" accept="application/json,.json" class="vh" tabindex="-1" aria-hidden="true">
+    <p class="note msg" id="presetMsg" role="status" hidden></p>
+    <p class="note" style="margin-top:12px">
+      O preset guarda tudo, inclusive as shapes que você subiu. É um <b>.json</b> portátil.
+    </p>
+  </section>
+
+  <section class="sec" style="border-bottom:none">
+    <p class="note">
+      <b>Fluxo:</b> desenha a shape → exporta SVG de cor única → sobe no estado que quiser →
+      ajusta grid, cor e escala. Estado 1 é highlight, estado 7 é sombra.
+      Desmarcar um estado deixa aquela faixa tonal vazia.
+    </p>
+  </section>
+
+</aside>
+
+<script>
+(function () {
+'use strict';
+/* bundle gerado por scripts/build.mjs — edite src/, nunca este arquivo */
+var __m = {};
+/* ---------- js/shapes.js ---------- */
+__m["js/shapes.js"] = (function () {
+/**
+ * shapes.js — tudo que envolve SVG: as shapes padrão, rasterização,
+ * tingimento e o cache de tints.
+ *
+ * Não conhece o DOM da página. Cria canvas e Image em memória, e só.
+ * Não importa nada de `state.js` — recebe por parâmetro o que precisa saber.
+ * É isso que permite testar este módulo isolado.
+ */
+
+/**
+ * Resolução em que cada shape é rasterizada antes de ser desenhada na célula.
+ * 128px cobre com folga o tamanho de célula usado na prática (o export vai até
+ * 3000px de largura com no mínimo 8 colunas, mas células grandes assim são raras
+ * e o custo de subir isso é memória multiplicada por cada entrada do cache).
+ */
+const TINT_PX = 128;
+
+/**
+ * Conjunto padrão: rampa monotônica de área preenchida, do highlight cheio
+ * até o ponto quase invisível da sombra. Os mesmos arquivos estão em
+ * `shapes/default/` — aqui eles ficam embutidos pra ferramenta funcionar
+ * offline, sem fetch, com duplo clique.
+ */
+const DEFAULT_SVG = [
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" rx="14" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 4 96 50 50 96 4 50Z" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="#fff" fill-rule="evenodd" d="M50 12a38 38 0 1 1 0 76 38 38 0 0 1 0-76Zm0 16a22 22 0 1 0 0 44 22 22 0 0 0 0-44Z"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="36" y="36" width="28" height="28" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="7" fill="#fff"/></svg>`,
+];
+
+/* ---------------- parsing ---------------- */
+
+/**
+ * Faz o parse de um SVG e devolve o elemento raiz e o viewBox resolvido.
+ * Lança se o texto não for um SVG válido — o protótipo falhava em silêncio
+ * aqui, e é o que gerava shape sumida sem explicação.
+ *
+ * @param {string} text código-fonte do SVG
+ * @returns {{el: Element, viewBox: string}}
+ */
+function parseSvg(text) {
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new Error('arquivo vazio');
+  }
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  if (doc.querySelector('parsererror')) {
+    throw new Error('XML malformado');
+  }
+  const el = doc.documentElement;
+  if (!el || el.nodeName.toLowerCase() !== 'svg') {
+    throw new Error('a raiz do arquivo não é <svg>');
+  }
+  const viewBox =
+    el.getAttribute('viewBox') ||
+    `0 0 ${parseFloat(el.getAttribute('width')) || 100} ${parseFloat(el.getAttribute('height')) || 100}`;
+  return { el, viewBox };
+}
+
+/**
+ * Rasteriza um SVG numa Image de TINT_PX.
+ *
+ * Reescreve width/height explícitos antes de serializar porque Safari e
+ * Firefox se recusam a desenhar SVG sem dimensão intrínseca num canvas.
+ *
+ * @param {string} text
+ * @returns {Promise<HTMLImageElement>}
+ */
+function svgToImage(text) {
+  return new Promise((resolve, reject) => {
+    let payload = text;
+    try {
+      const { el } = parseSvg(text);
+      if (!el.getAttribute('viewBox')) {
+        const w = parseFloat(el.getAttribute('width')) || 100;
+        const h = parseFloat(el.getAttribute('height')) || 100;
+        el.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      }
+      el.setAttribute('width', String(TINT_PX));
+      el.setAttribute('height', String(TINT_PX));
+      payload = new XMLSerializer().serializeToString(el);
+    } catch (err) {
+      reject(err instanceof Error ? err : new Error('SVG inválido'));
+      return;
+    }
+
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = () => reject(new Error('o navegador não conseguiu desenhar este SVG'));
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(payload);
+  });
+}
+
+/**
+ * Carrega a imagem de um slot, guardando o erro no próprio slot em vez de
+ * estourar. Devolve a mensagem de erro, ou null se deu certo.
+ *
+ * @param {import('./state.js').Slot} slot
+ * @returns {Promise<string|null>}
+ */
+async function buildSlotImage(slot) {
+  if (!slot.svgText) {
+    slot.img = null;
+    slot.error = null;
+    return null;
+  }
+  if (slot.img && !slot.dirtyImg) return slot.error;
+  try {
+    slot.img = await svgToImage(slot.svgText);
+    slot.dirtyImg = false;
+    slot.error = null;
+    return null;
+  } catch (err) {
+    slot.img = null;
+    slot.dirtyImg = false;
+    slot.error = err.message || 'SVG inválido';
+    return slot.error;
+  }
+}
+
+/* ---------------- tingimento ---------------- */
+
+/**
+ * Desenha a shape centralizada e, se `solid`, troca todos os pixels opacos
+ * pela cor pedida via `source-in`.
+ *
+ * @param {HTMLImageElement} img
+ * @param {string} color hex
+ * @param {boolean} solid
+ * @returns {HTMLCanvasElement}
+ */
+function makeTint(img, color, solid) {
+  const c = document.createElement('canvas');
+  c.width = c.height = TINT_PX;
+  const x = c.getContext('2d');
+  const s = Math.min(TINT_PX / img.width, TINT_PX / img.height);
+  const w = img.width * s;
+  const h = img.height * s;
+  x.drawImage(img, (TINT_PX - w) / 2, (TINT_PX - h) / 2, w, h);
+  if (solid) {
+    x.globalCompositeOperation = 'source-in';
+    x.fillStyle = color;
+    x.fillRect(0, 0, TINT_PX, TINT_PX);
+    x.globalCompositeOperation = 'source-over';
+  }
+  return c;
+}
+
+/**
+ * Cache de shape tingida.
+ *
+ * O teto de 1200 entradas não é decoração: no modo Pixel cada célula pode
+ * pedir uma cor diferente. As cores chegam aqui já quantizadas em passos de
+ * 32 por canal (ver `palette.cellColor`), o que limita o espaço a 9³ = 729
+ * cores por shape. O teto cobre o pior caso com folga e o cache é zerado
+ * inteiro quando estoura — zerar é mais barato e mais previsível que LRU,
+ * e o custo é um quadro mais lento de vez em quando.
+ */
+const tintCache = new Map();
+const TINT_CACHE_MAX = 1200;
+
+/** Zera o cache. Chame sempre que shape, cor de estado ou `fill` mudarem. */
+function clearTints() {
+  tintCache.clear();
+}
+
+/** @returns {number} entradas em cache, pra depuração */
+function tintCacheSize() {
+  return tintCache.size;
+}
+
+/**
+ * Devolve a shape do slot já tingida, criando e guardando sob demanda.
+ *
+ * @param {number} slotIndex índice do slot, compõe a chave do cache
+ * @param {HTMLImageElement|null} img imagem já rasterizada do slot
+ * @param {string} hex cor pedida
+ * @param {boolean} solid se falso, o SVG mantém as cores originais
+ * @returns {HTMLCanvasElement|null}
+ */
+function getTint(slotIndex, img, hex, solid) {
+  if (!img) return null;
+  const key = slotIndex + '|' + (solid ? hex : 'raw');
+  let c = tintCache.get(key);
+  if (c) return c;
+  c = makeTint(img, hex, solid);
+  if (tintCache.size > TINT_CACHE_MAX) tintCache.clear();
+  tintCache.set(key, c);
+  return c;
+}
+return { DEFAULT_SVG: DEFAULT_SVG, TINT_PX: TINT_PX, buildSlotImage: buildSlotImage, clearTints: clearTints, getTint: getTint, makeTint: makeTint, parseSvg: parseSvg, svgToImage: svgToImage, tintCacheSize: tintCacheSize };
+})();
+/* ---------- js/state.js ---------- */
+__m["js/state.js"] = (function () {
+const { DEFAULT_SVG } = __m["js/shapes.js"];
+/**
+ * state.js — estado central da aplicação e um pub/sub mínimo.
+ *
+ * Este módulo não conhece o DOM. Ele guarda o que a ferramenta é num dado
+ * momento: os parâmetros do render (`S`), os 7 slots de shape (`slots`) e a
+ * paleta extraída. Quem desenha lê daqui; quem é interface escreve aqui.
+ *
+ * O pub/sub existe pra desacoplar: `renderer` e `main` reagem a mudanças sem
+ * precisar se conhecer. Ele é síncrono e sem fila, de propósito — o loop de
+ * render já roda a cada quadro, então não faz sentido agendar nada.
+ */
+
+
+
+/** Quantidade de faixas tonais. Mudar isso quebra o conceito da ferramenta. */
+const N = 7;
+
+/** Rótulo e subtítulo de cada estado, do highlight à sombra. */
+const STATE_META = [
+  ['STATE 1', 'Highlights'],
+  ['STATE 2', 'Light mid'],
+  ['STATE 3', 'Mid high'],
+  ['STATE 4', 'Midtones'],
+  ['STATE 5', 'Mid low'],
+  ['STATE 6', 'Dark mid'],
+  ['STATE 7', 'Shadows (100%)'],
+];
+
+/**
+ * Parâmetros de render.
+ *
+ * `bg` é a cor de fundo da COMPOSIÇÃO — escolha artística do usuário.
+ * Ela não tem nenhuma relação com o tema da interface e nunca deve ser
+ * derivada de um token de CSS.
+ *
+ * @typedef {'state'|'pixel'|'quant'} ColorMode
+ */
+const S = {
+  cols: 80,
+  bg: '#000000',
+  fill: true,
+  invert: false,
+  scale: false,
+  minS: 30,
+  maxS: 100,
+  rot: false,
+  rotInt: 400,
+  bri: 0,
+  con: 0,
+  gam: 1,
+  res: 1440,
+  square: false,
+  playing: true,
+  /** @type {ColorMode} */
+  cmode: 'state',
+  palN: 5,
+  sat: 0,
+  autoPal: true,
+};
+
+/** Cópia dos padrões, pra `reset()` e pra validar preset. */
+const S_DEFAULTS = { ...S };
+
+/**
+ * Um slot por faixa tonal.
+ * @typedef {object} Slot
+ * @property {boolean} on          estado ligado ou desligado
+ * @property {string}  color       cor do estado, hex
+ * @property {string}  svgText     código-fonte do SVG
+ * @property {HTMLImageElement|null} img  imagem já rasterizada
+ * @property {boolean} dirtyImg    marca que o svgText mudou
+ * @property {string}  name        nome do arquivo, ou 'padrão'
+ * @property {string|null} error   mensagem de erro do último carregamento
+ */
+
+/** @type {Slot[]} */
+const slots = [];
+for (let i = 0; i < N; i++) {
+  slots.push({
+    on: true,
+    color: '#ffffff',
+    svgText: DEFAULT_SVG[i],
+    img: null,
+    dirtyImg: false,
+    name: 'padrão',
+    error: null,
+  });
+}
+
+/** Paleta extraída da imagem, ordenada da mais clara pra mais escura. */
+let palette = /** @type {number[][]} */ ([]);
+
+/* ---------------- pub/sub ---------------- */
+
+const listeners = new Set();
+
+/**
+ * Registra um ouvinte de mudança de estado.
+ * @param {(key:string, value:*) => void} fn
+ * @returns {() => void} função pra cancelar a inscrição
+ */
+function subscribe(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+/**
+ * Dispara os ouvintes. Público porque quem muta `slots` direto
+ * (upload de SVG, toggle de estado) precisa avisar.
+ * @param {string} key
+ * @param {*} [value]
+ */
+function emit(key, value) {
+  for (const fn of listeners) fn(key, value);
+}
+
+/* ---------------- acesso ---------------- */
+
+/**
+ * Lê um parâmetro de render.
+ * @param {keyof typeof S} key
+ */
+function get(key) {
+  return S[key];
+}
+
+/**
+ * Escreve um parâmetro de render e notifica, se de fato mudou.
+ * @param {keyof typeof S} key
+ * @param {*} value
+ */
+function set(key, value) {
+  if (S[key] === value) return;
+  S[key] = value;
+  emit(key, value);
+}
+
+/** @returns {number[][]} a paleta atual */
+function getPalette() {
+  return palette;
+}
+
+/**
+ * Substitui a paleta e notifica.
+ * @param {number[][]} next
+ */
+function setPalette(next) {
+  palette = Array.isArray(next) ? next : [];
+  emit('palette', palette);
+}
+
+/** Volta os parâmetros de render aos valores de fábrica. Não mexe nos slots. */
+function resetParams() {
+  Object.assign(S, S_DEFAULTS);
+  emit('reset');
+}
+
+/** @returns {object} cópia dos parâmetros padrão, pra validação de preset */
+function defaults() {
+  return { ...S_DEFAULTS };
+}
+return { N: N, S: S, STATE_META: STATE_META, defaults: defaults, emit: emit, get: get, getPalette: getPalette, resetParams: resetParams, set: set, setPalette: setPalette, slots: slots, subscribe: subscribe };
+})();
+/* ---------- js/palette.js ---------- */
+__m["js/palette.js"] = (function () {
+/**
+ * palette.js — cor: conversões, luminância, saturação, extração de paleta
+ * por k-means e a decisão de cor de cada célula.
+ *
+ * Não conhece o DOM da página. `extractPalette` cria um canvas em memória
+ * só pra reamostrar a fonte.
+ */
+
+/** Luminância relativa aproximada (coeficientes Rec.709), em 0..255. */
+function lum(r, g, b) {
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * @param {string} h cor no formato `#rrggbb`
+ * @returns {[number,number,number]}
+ */
+function hex2rgb(h) {
+  return [
+    parseInt(h.slice(1, 3), 16),
+    parseInt(h.slice(3, 5), 16),
+    parseInt(h.slice(5, 7), 16),
+  ];
+}
+
+/**
+ * @returns {string} cor no formato `#rrggbb`, com clamp e arredondamento
+ */
+function rgb2hex(r, g, b) {
+  const f = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return '#' + f(r) + f(g) + f(b);
+}
+
+/**
+ * Afasta ou aproxima a cor da própria luminância.
+ * @param {number} amt -100 a 100
+ * @returns {[number,number,number]} pode sair fora de 0..255, o clamp é no hex
+ */
+function saturate(r, g, b, amt) {
+  if (!amt) return [r, g, b];
+  const k = 1 + amt / 100;
+  const l = lum(r, g, b);
+  return [l + (r - l) * k, l + (g - l) * k, l + (b - l) * k];
+}
+
+/* ---------------- extração ---------------- */
+
+/** Lado do thumbnail usado pelo k-means. 96×96 = 9216 amostras. */
+const SAMPLE_SIDE = 96;
+/** Iterações do k-means. Doze já estabiliza para k ≤ 8. */
+const KMEANS_ITER = 12;
+
+/**
+ * Extrai `k` cores dominantes da fonte por k-means em RGB.
+ *
+ * Os centroides iniciais são pegos espalhados pela varredura da imagem, não
+ * ao acaso: com semente aleatória a paleta mudava a cada clique no mesmo
+ * arquivo, o que é péssimo pra quem está ajustando um pôster.
+ *
+ * A paleta sai ordenada da mais clara pra mais escura — é isso que faz
+ * "Aplicar nos estados" já cair coerente com a escala tonal.
+ *
+ * @param {CanvasImageSource|null} source imagem, vídeo ou canvas
+ * @param {number} k 2 a 8
+ * @returns {number[][]} lista de [r,g,b] inteiros
+ */
+function extractPalette(source, k) {
+  if (!source) return [];
+
+  const c = document.createElement('canvas');
+  c.width = c.height = SAMPLE_SIDE;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  try {
+    x.drawImage(source, 0, 0, SAMPLE_SIDE, SAMPLE_SIDE);
+  } catch {
+    return []; // fonte ainda não tem quadro, ou canvas contaminado
+  }
+
+  let data;
+  try {
+    data = x.getImageData(0, 0, SAMPLE_SIDE, SAMPLE_SIDE).data;
+  } catch {
+    return [];
+  }
+
+  const pts = [];
+  for (let i = 0; i < data.length; i += 4) pts.push([data[i], data[i + 1], data[i + 2]]);
+
+  const cent = [];
+  for (let i = 0; i < k; i++) {
+    const p = pts[Math.floor((pts.length * (i + 0.5)) / k)];
+    cent.push([p[0], p[1], p[2]]);
+  }
+
+  for (let it = 0; it < KMEANS_ITER; it++) {
+    const sum = cent.map(() => [0, 0, 0, 0]);
+    for (const p of pts) {
+      let bi = 0;
+      let bd = Infinity;
+      for (let i = 0; i < k; i++) {
+        const dr = p[0] - cent[i][0];
+        const dg = p[1] - cent[i][1];
+        const db = p[2] - cent[i][2];
+        const dd = dr * dr + dg * dg + db * db;
+        if (dd < bd) {
+          bd = dd;
+          bi = i;
+        }
+      }
+      sum[bi][0] += p[0];
+      sum[bi][1] += p[1];
+      sum[bi][2] += p[2];
+      sum[bi][3]++;
+    }
+    for (let i = 0; i < k; i++) {
+      if (sum[i][3]) {
+        cent[i] = [sum[i][0] / sum[i][3], sum[i][1] / sum[i][3], sum[i][2] / sum[i][3]];
+      }
+    }
+  }
+
+  cent.sort((a, b) => lum(b[0], b[1], b[2]) - lum(a[0], a[1], a[2]));
+  return cent.map((p) => [Math.round(p[0]), Math.round(p[1]), Math.round(p[2])]);
+}
+
+/**
+ * Cor da paleta mais próxima em distância euclidiana no cubo RGB.
+ * @param {number[][]} palette
+ * @returns {number[]}
+ */
+function nearestPal(palette, r, g, b) {
+  let bi = 0;
+  let bd = Infinity;
+  for (let i = 0; i < palette.length; i++) {
+    const p = palette[i];
+    const dr = r - p[0];
+    const dg = g - p[1];
+    const db = b - p[2];
+    const dd = dr * dr + dg * dg + db * db;
+    if (dd < bd) {
+      bd = dd;
+      bi = i;
+    }
+  }
+  return palette[bi];
+}
+
+/**
+ * Distribui uma paleta pelos N estados, do claro ao escuro, interpolando
+ * quando a paleta tem menos cores que estados.
+ *
+ * @param {number[][]} palette
+ * @param {number} n quantidade de estados
+ * @returns {string[]} hex por estado
+ */
+function spreadOverStates(palette, n) {
+  if (!palette.length) return [];
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const t = palette.length === 1 ? 0 : (i * (palette.length - 1)) / (n - 1);
+    const a = palette[Math.floor(t)];
+    const b = palette[Math.ceil(t)];
+    const f = t - Math.floor(t);
+    out.push(
+      rgb2hex(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f)
+    );
+  }
+  return out;
+}
+
+/* ---------------- cor da célula ---------------- */
+
+/**
+ * Passo de quantização por canal nos modos Pixel e Quantizar.
+ *
+ * Isto existe pelo cache de tints, não por estética: sem arredondar, uma foto
+ * colorida pede uma cor nova quase toda célula e o cache vira um vazamento de
+ * memória. Com passo 32 sobram 9 níveis por canal, 729 combinações por shape.
+ * Na prática ninguém enxerga a diferença, porque a imagem já está abstraída
+ * em células. Está documentado no manual — não mexa sem medir memória.
+ */
+const QUANT_STEP = 32;
+
+/**
+ * Decide a cor de uma célula segundo o modo de cor ativo.
+ *
+ * Roda uma vez por célula por quadro, então é escrita com argumentos
+ * posicionais e sem alocar objeto.
+ *
+ * @param {'state'|'pixel'|'quant'} mode
+ * @param {string} stateColor cor fixa do estado, usada no modo `state`
+ * @param {Uint8ClampedArray|null} rgb dados RGBA da amostragem
+ * @param {number} ci índice da célula
+ * @param {number[][]} palette
+ * @param {number} sat -100 a 100
+ * @returns {string} hex
+ */
+function cellColor(mode, stateColor, rgb, ci, palette, sat) {
+  if (mode === 'state' || !rgb) return stateColor;
+
+  const p = ci * 4;
+  let r = rgb[p];
+  let g = rgb[p + 1];
+  let b = rgb[p + 2];
+
+  if (mode === 'quant' && palette.length) {
+    const q = nearestPal(palette, r, g, b);
+    r = q[0];
+    g = q[1];
+    b = q[2];
+  }
+  if (sat) {
+    const c = saturate(r, g, b, sat);
+    r = c[0];
+    g = c[1];
+    b = c[2];
+  }
+
+  return rgb2hex(
+    Math.round(r / QUANT_STEP) * QUANT_STEP,
+    Math.round(g / QUANT_STEP) * QUANT_STEP,
+    Math.round(b / QUANT_STEP) * QUANT_STEP
+  );
+}
+return { cellColor: cellColor, extractPalette: extractPalette, hex2rgb: hex2rgb, lum: lum, nearestPal: nearestPal, rgb2hex: rgb2hex, saturate: saturate, spreadOverStates: spreadOverStates };
+})();
+/* ---------- js/sources.js ---------- */
+__m["js/sources.js"] = (function () {
+/**
+ * sources.js — de onde vem a imagem: arquivo, vídeo, webcam, arrastar e soltar.
+ *
+ * Guarda a fonte ativa e cuida do ciclo de vida dela: parar a stream da câmera
+ * ao trocar, revogar object URL, avisar quem escuta quando a fonte muda.
+ *
+ * Este é o único módulo além de `main.js` que fala com o DOM da página, e só
+ * pro drop zone. O resto é elemento em memória.
+ */
+
+/**
+ * @typedef {'image'|'video'|'cam'} SourceType
+ * @typedef {object} SourceInfo
+ * @property {CanvasImageSource} el
+ * @property {SourceType} type
+ * @property {number} w
+ * @property {number} h
+ */
+
+/** @type {SourceInfo|null} */
+let current = null;
+
+/** @type {MediaStream|null} */
+let camStream = null;
+
+/**
+ * Object URL do arquivo em uso. Guardado pra ser revogado na próxima troca.
+ * Imagem revoga assim que decodifica; vídeo não pode, o elemento ainda
+ * precisa da URL pra fazer loop e seek.
+ */
+let heldUrl = null;
+
+const changeListeners = new Set();
+const errorListeners = new Set();
+
+/** @param {(info: SourceInfo) => void} fn */
+function onChange(fn) {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+}
+
+/** @param {(message: string) => void} fn */
+function onError(fn) {
+  errorListeners.add(fn);
+  return () => errorListeners.delete(fn);
+}
+
+function emitChange() {
+  for (const fn of changeListeners) fn(current);
+}
+
+function fail(message) {
+  for (const fn of errorListeners) fn(message);
+}
+
+/** @returns {SourceInfo|null} */
+function getSource() {
+  return current;
+}
+
+/* ---------------- limpeza ---------------- */
+
+/** Para a stream da webcam, se houver. Idempotente. */
+function stopCam() {
+  if (!camStream) return;
+  camStream.getTracks().forEach((t) => t.stop());
+  camStream = null;
+}
+
+/** Revoga o object URL retido, se houver. */
+function releaseHeldUrl() {
+  if (!heldUrl) return;
+  URL.revokeObjectURL(heldUrl);
+  heldUrl = null;
+}
+
+/**
+ * Solta tudo: câmera, vídeo tocando e object URL.
+ * Chamado ao trocar de fonte e ao sair da página.
+ */
+function releaseAll() {
+  stopCam();
+  if (current && current.type === 'video' && current.el.pause) {
+    current.el.pause();
+    current.el.removeAttribute('src');
+    current.el.load();
+  }
+  releaseHeldUrl();
+}
+
+/** Chamado antes de instalar uma fonte nova. */
+function prepareForNewSource() {
+  stopCam();
+  releaseHeldUrl();
+}
+
+/* ---------------- instalar fontes ---------------- */
+
+/**
+ * @param {string} url data: ou blob:
+ */
+function setImage(url) {
+  prepareForNewSource();
+  const isBlob = url.startsWith('blob:');
+  const im = new Image();
+  im.onload = () => {
+    // a imagem já está decodificada em memória: a URL não serve mais pra nada
+    if (isBlob) URL.revokeObjectURL(url);
+    current = { el: im, type: 'image', w: im.naturalWidth, h: im.naturalHeight };
+    emitChange();
+  };
+  im.onerror = () => {
+    if (isBlob) URL.revokeObjectURL(url);
+    fail('não consegui abrir essa imagem');
+  };
+  im.src = url;
+}
+
+/**
+ * @param {string} url
+ * @param {boolean} playing estado atual de play/pause
+ */
+function setVideo(url, playing) {
+  prepareForNewSource();
+  const v = document.createElement('video');
+  v.src = url;
+  v.loop = true;
+  v.muted = true;
+  v.playsInline = true;
+  // o elemento precisa da URL viva pra fazer loop, então ela fica retida
+  if (url.startsWith('blob:')) heldUrl = url;
+  v.addEventListener('error', () => fail('não consegui abrir esse vídeo'));
+  v.addEventListener(
+    'loadeddata',
+    () => {
+      current = { el: v, type: 'video', w: v.videoWidth, h: v.videoHeight };
+      if (playing) v.play().catch(() => {});
+      emitChange();
+    },
+    { once: true }
+  );
+}
+
+/**
+ * Pede a câmera e instala como fonte ao vivo.
+ * @returns {Promise<boolean>} true se conseguiu
+ */
+async function startCam() {
+  prepareForNewSource();
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    fail('este navegador não expõe a câmera. Chrome ou Firefox resolvem.');
+    return false;
+  }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+    const v = document.createElement('video');
+    v.srcObject = camStream;
+    v.muted = true;
+    v.playsInline = true;
+    await v.play();
+    current = { el: v, type: 'cam', w: v.videoWidth, h: v.videoHeight };
+    emitChange();
+    return true;
+  } catch (err) {
+    stopCam();
+    fail(cameraErrorMessage(err));
+    return false;
+  }
+}
+
+/**
+ * Traduz o erro de getUserMedia pra algo acionável.
+ * @param {DOMException|Error} err
+ */
+function cameraErrorMessage(err) {
+  switch (err && err.name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'câmera negada. Libere a permissão no cadeado da barra de endereço. Abrindo o arquivo direto do disco, o Safari costuma bloquear — use Chrome, ou sirva por https.';
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'nenhuma câmera encontrada neste computador.';
+    case 'NotReadableError':
+      return 'a câmera está ocupada por outro aplicativo.';
+    default:
+      return 'não consegui abrir a câmera' + (err && err.name ? ` (${err.name})` : '') + '.';
+  }
+}
+
+/**
+ * Play/pause do vídeo ou da webcam. Não faz nada com imagem parada.
+ * @param {boolean} playing
+ */
+function setPlaying(playing) {
+  if (!current || current.type === 'image') return;
+  const el = current.el;
+  if (playing) el.play && el.play().catch(() => {});
+  else el.pause && el.pause();
+}
+
+/* ---------------- entrada de arquivo ---------------- */
+
+/**
+ * Recebe um File e instala como fonte, se o tipo servir.
+ * @param {File} file
+ * @param {boolean} playing
+ * @returns {boolean} true se o arquivo foi aceito
+ */
+function loadFile(file, playing) {
+  if (!file) return false;
+  // SVG cai aqui quando o usuário arrasta uma shape por engano: ignora,
+  // shape se sobe pelo botão do estado
+  if (file.type.startsWith('image/svg')) {
+    fail('SVG é shape, não é fonte. Suba pelo ↑ de um estado.');
+    return false;
+  }
+  if (file.type.startsWith('image/')) {
+    setImage(URL.createObjectURL(file));
+    return true;
+  }
+  if (file.type.startsWith('video/')) {
+    setVideo(URL.createObjectURL(file), playing);
+    return true;
+  }
+  fail('formato não suportado: ' + (file.type || 'desconhecido'));
+  return false;
+}
+
+/**
+ * Liga o arrastar e soltar na janela inteira, mostrando o overlay.
+ *
+ * O contador existe porque `dragleave` dispara ao passar por cima de
+ * qualquer filho; sem contar entradas e saídas o overlay pisca.
+ *
+ * @param {HTMLElement} overlayEl
+ * @param {() => boolean} isPlaying
+ */
+function initDropZone(overlayEl, isPlaying) {
+  let depth = 0;
+
+  const show = () => overlayEl.classList.add('on');
+  const hide = () => {
+    depth = 0;
+    overlayEl.classList.remove('on');
+  };
+
+  window.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    depth++;
+    show();
+  });
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('dragleave', () => {
+    depth--;
+    if (depth <= 0) hide();
+  });
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+    hide();
+    const file = e.dataTransfer && e.dataTransfer.files[0];
+    if (file) loadFile(file, isPlaying());
+  });
+}
+return { getSource: getSource, initDropZone: initDropZone, loadFile: loadFile, onChange: onChange, onError: onError, releaseAll: releaseAll, setImage: setImage, setPlaying: setPlaying, setVideo: setVideo, startCam: startCam, stopCam: stopCam };
+})();
+/* ---------- js/renderer.js ---------- */
+__m["js/renderer.js"] = (function () {
+const { S, slots, N, getPalette } = __m["js/state.js"];
+const { getTint } = __m["js/shapes.js"];
+const { cellColor } = __m["js/palette.js"];
+const { getSource } = __m["js/sources.js"];
+/**
+ * renderer.js — o núcleo: amostragem, mapeamento tonal e desenho.
+ *
+ * O algoritmo, em uma frase: reduz a fonte a um grid de cols×rows pixels,
+ * lê a luminância de cada um, escolhe a faixa tonal correspondente e carimba
+ * a shape daquela faixa na célula.
+ *
+ * Regra do módulo: nada de DOM além do canvas recebido em `init()`. Quem
+ * quiser mostrar fps na tela se inscreve em `onStats`.
+ */
+
+
+
+
+
+
+/** @type {HTMLCanvasElement|null} */
+let out = null;
+/** @type {CanvasRenderingContext2D|null} */
+let ctx = null;
+
+/** Canvas auxiliar onde a fonte é reduzida ao tamanho do grid. */
+const samp = document.createElement('canvas');
+const sctx = samp.getContext('2d', { willReadFrequently: true });
+
+/* último quadro amostrado, reaproveitado quando o vídeo está pausado
+   e usado pelo export pra não depender de um quadro novo */
+let lastCells = null;
+let lastRGB = null;
+let lastGeo = null;
+
+let rafId = 0;
+let frames = 0;
+let fpsT = 0;
+
+const statsListeners = new Set();
+
+/** @param {(stats:{fps:number, cols:number, rows:number}) => void} fn */
+function onStats(fn) {
+  statsListeners.add(fn);
+  return () => statsListeners.delete(fn);
+}
+
+/**
+ * @param {HTMLCanvasElement} canvas canvas de saída
+ */
+function init(canvas) {
+  out = canvas;
+  ctx = canvas.getContext('2d');
+}
+
+/**
+ * Último quadro amostrado, pro export.
+ * @returns {{geo:object, cells:Float32Array, rgb:Uint8ClampedArray}|null}
+ */
+function getFrame() {
+  if (!lastGeo || !lastCells) return null;
+  return { geo: lastGeo, cells: lastCells, rgb: lastRGB };
+}
+
+/* ---------------- mapeamento tonal ---------------- */
+
+/**
+ * Aplica brilho, contraste e gamma antes da classificação.
+ *
+ * Isto roda ANTES do mapeamento, então não é efeito visual: é o que decide
+ * em qual das 7 faixas a célula cai.
+ *
+ * @param {number} l luminância 0..1
+ * @returns {number} 0..1
+ */
+function tonemap(l) {
+  let v = l + S.bri / 200;
+  const c = S.con / 100;
+  v = (v - 0.5) * (1 + c) + 0.5;
+  v = Math.pow(Math.max(0, Math.min(1, v)), 1 / S.gam);
+  return Math.max(0, Math.min(1, v));
+}
+
+/**
+ * Geometria do quadro: recorte da fonte, tamanho do grid e do canvas.
+ *
+ * O número de linhas é derivado da proporção da fonte, nunca escolhido pelo
+ * usuário — é o que mantém a célula quadrada.
+ *
+ * @param {number} srcW
+ * @param {number} srcH
+ */
+function geometry(srcW, srcH) {
+  let w = srcW;
+  let h = srcH;
+  let ox = 0;
+  let oy = 0;
+  if (S.square) {
+    const m = Math.min(w, h);
+    ox = (w - m) / 2;
+    oy = (h - m) / 2;
+    w = h = m;
+  }
+  const cols = S.cols;
+  const cell = w / cols;
+  const rows = Math.max(1, Math.round(h / cell));
+  const outW = S.res;
+  const outH = Math.round((outW * rows) / cols);
+  return { sx: ox, sy: oy, sw: w, sh: h, cols, rows, outW, outH, cs: outW / cols };
+}
+
+/**
+ * Índice da faixa tonal de uma luminância já tonemapeada.
+ * @param {number} l 0..1
+ * @returns {number} 0..N-1
+ */
+function bandIndex(l) {
+  let idx = Math.floor((1 - l) * N);
+  if (idx >= N) idx = N - 1;
+  if (idx < 0) idx = 0;
+  return S.invert ? N - 1 - idx : idx;
+}
+
+/**
+ * Fator de tamanho da célula, considerando scale e max size.
+ * @param {number} l luminância tonemapeada
+ * @returns {number} multiplicador do lado da célula
+ */
+function sizeFactor(l) {
+  const minF = S.minS / 100;
+  const maxF = S.maxS / 100;
+  if (S.scale) {
+    // posição dentro da faixa: mais claro = maior
+    const band = 1 - ((1 - l) * N - Math.floor((1 - l) * N));
+    return minF + (maxF - minF) * (S.invert ? 1 - band : band);
+  }
+  return maxF;
+}
+
+/* ---------------- amostragem e desenho ---------------- */
+
+/** Reduz a fonte ao grid e calcula a luminância de cada célula. */
+function sample() {
+  const info = getSource();
+  if (!info || !info.w || !info.h) return false;
+
+  const g = geometry(info.w, info.h);
+  if (out.width !== g.outW || out.height !== g.outH) {
+    out.width = g.outW;
+    out.height = g.outH;
+  }
+
+  samp.width = g.cols;
+  samp.height = g.rows;
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+  try {
+    sctx.drawImage(info.el, g.sx, g.sy, g.sw, g.sh, 0, 0, g.cols, g.rows);
+  } catch {
+    return false; // quadro ainda não disponível
+  }
+
+  let d;
+  try {
+    d = sctx.getImageData(0, 0, g.cols, g.rows).data;
+  } catch {
+    return false;
+  }
+
+  const cells = new Float32Array(g.cols * g.rows);
+  for (let i = 0, p = 0; i < cells.length; i++, p += 4) {
+    cells[i] = (0.2126 * d[p] + 0.7152 * d[p + 1] + 0.0722 * d[p + 2]) / 255;
+  }
+
+  lastCells = cells;
+  lastRGB = d;
+  lastGeo = g;
+  return true;
+}
+
+/**
+ * Carimba as shapes no canvas de saída.
+ * @param {number} now timestamp do rAF, usado pela rotação
+ */
+function paint(now) {
+  const g = lastGeo;
+  const cells = lastCells;
+  if (!g || !cells || !ctx) return;
+
+  ctx.fillStyle = S.bg;
+  ctx.fillRect(0, 0, out.width, out.height);
+
+  const cs = g.cs;
+  const step = S.rot ? Math.floor(now / S.rotInt) : 0;
+  const palette = getPalette();
+  const mode = S.cmode;
+  const sat = S.sat;
+  const fill = S.fill;
+
+  for (let y = 0; y < g.rows; y++) {
+    for (let x = 0; x < g.cols; x++) {
+      const ci = y * g.cols + x;
+      const l = tonemap(cells[ci]);
+      const idx = bandIndex(l);
+
+      const slot = slots[idx];
+      if (!slot.on) continue;
+
+      const color = cellColor(mode, slot.color, lastRGB, ci, palette, sat);
+      const tint = getTint(idx, slot.img, color, fill);
+      if (!tint) continue;
+
+      const size = cs * sizeFactor(l);
+      if (size <= 0.2) continue;
+
+      const cx = x * cs + cs / 2;
+      const cy = y * cs + cs / 2;
+
+      if (S.rot) {
+        // sorteio estável por posição: a mesma célula gira sempre igual,
+        // senão a textura ferve entre quadros
+        const seed = ((x * 73856093) ^ (y * 19349663) ^ (idx * 83492791)) >>> 0;
+        const q = ((seed >>> 3) + step + (seed % 4)) % 4;
+        if (q) {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate((q * Math.PI) / 2);
+          ctx.drawImage(tint, -size / 2, -size / 2, size, size);
+          ctx.restore();
+          continue;
+        }
+      }
+
+      ctx.drawImage(tint, cx - size / 2, cy - size / 2, size, size);
+    }
+  }
+}
+
+/* ---------------- loop ---------------- */
+
+function frame(now) {
+  rafId = requestAnimationFrame(frame);
+
+  const info = getSource();
+  if (!info) return;
+
+  // vídeo pausado: repinta o mesmo quadro, sem reamostrar.
+  // Repintar ainda é necessário porque cor, escala e rotação mudam sem a fonte mudar.
+  if (info.type !== 'image' && !S.playing && lastCells) {
+    paint(now);
+    return;
+  }
+
+  if (!sample()) return;
+  paint(now);
+
+  frames++;
+  if (now - fpsT > 1000) {
+    const g = lastGeo;
+    for (const fn of statsListeners) fn({ fps: frames, cols: g.cols, rows: g.rows });
+    frames = 0;
+    fpsT = now;
+  }
+}
+
+/** Liga o loop de render. Idempotente. */
+function start() {
+  if (rafId) return;
+  fpsT = performance.now();
+  frames = 0;
+  rafId = requestAnimationFrame(frame);
+}
+
+/**
+ * Para o loop. Usado quando a aba fica oculta — sem isso o navegador
+ * continua cobrando CPU de um canvas que ninguém está vendo.
+ */
+function stop() {
+  if (!rafId) return;
+  cancelAnimationFrame(rafId);
+  rafId = 0;
+}
+
+/** @returns {boolean} se o loop está rodando */
+function isRunning() {
+  return rafId !== 0;
+}
+return { geometry: geometry, getFrame: getFrame, init: init, isRunning: isRunning, onStats: onStats, paint: paint, start: start, stop: stop, tonemap: tonemap };
+})();
+/* ---------- js/export.js ---------- */
+__m["js/export.js"] = (function () {
+const { S, slots, N, getPalette } = __m["js/state.js"];
+const { parseSvg } = __m["js/shapes.js"];
+const { cellColor } = __m["js/palette.js"];
+const { tonemap, getFrame } = __m["js/renderer.js"];
+/**
+ * export.js — saída: PNG, SVG vetorial e gravação WebM.
+ *
+ * O export de SVG não é um traçado do canvas: ele reconstrói a composição
+ * célula por célula usando as shapes originais, uma `<symbol>` por combinação
+ * de shape e cor e um `<use>` por célula. É por isso que abre editável no
+ * Illustrator.
+ */
+
+
+
+
+
+
+/** @type {HTMLCanvasElement|null} */
+let out = null;
+
+/** @param {HTMLCanvasElement} canvas */
+function init(canvas) {
+  out = canvas;
+}
+
+/** Nome de arquivo com timestamp, pra não sobrescrever download anterior. */
+function filename(ext) {
+  return 'svg-dither-' + Date.now() + '.' + ext;
+}
+
+/**
+ * Dispara um download. Revoga object URL depois de um tempo — revogar na hora
+ * cancela o download em alguns navegadores.
+ * @param {string} href
+ * @param {string} name
+ * @param {boolean} isObjectUrl
+ */
+function download(href, name, isObjectUrl) {
+  const a = document.createElement('a');
+  a.download = name;
+  a.href = href;
+  a.click();
+  if (isObjectUrl) setTimeout(() => URL.revokeObjectURL(href), 10000);
+}
+
+/* ---------------- PNG ---------------- */
+
+/** Baixa o quadro atual do canvas como PNG. */
+function exportPNG() {
+  if (!out) return;
+  download(out.toDataURL('image/png'), filename('png'), false);
+}
+
+/* ---------------- SVG ---------------- */
+
+/**
+ * Reconstrói a composição em SVG vetorial e baixa.
+ * @returns {string|null} mensagem de erro, ou null se deu certo
+ */
+function exportSVG() {
+  const frame = getFrame();
+  if (!frame || !out) return 'nada pra exportar ainda';
+
+  const { geo: g, cells, rgb } = frame;
+  const cs = g.cs;
+
+  // pré-parseia cada shape uma vez só
+  const parsed = [];
+  for (let i = 0; i < N; i++) {
+    const slot = slots[i];
+    if (!slot.on || !slot.svgText) {
+      parsed.push(null);
+      continue;
+    }
+    try {
+      const { el, viewBox } = parseSvg(slot.svgText);
+      parsed.push({ el, viewBox });
+    } catch {
+      parsed.push(null);
+    }
+  }
+
+  const defs = [];
+  const symId = new Map();
+
+  /**
+   * Devolve o id do `<symbol>` para (shape, cor), criando na primeira vez.
+   * No modo Estado ou Quantizar isso gera pouquíssimos símbolos. No modo
+   * Pixel pode gerar centenas — está documentado no manual.
+   */
+  function symbolFor(i, hex) {
+    const key = i + '|' + hex;
+    const hit = symId.get(key);
+    if (hit) return hit;
+    const pr = parsed[i];
+    if (!pr) return null;
+    const clone = pr.el.cloneNode(true);
+    if (S.fill) {
+      clone
+        .querySelectorAll('path,circle,rect,polygon,ellipse,polyline,g')
+        .forEach((n) => n.setAttribute('fill', hex));
+    }
+    const id = 's' + symId.size;
+    symId.set(key, id);
+    defs.push(`<symbol id="${id}" viewBox="${pr.viewBox}">${clone.innerHTML}</symbol>`);
+    return id;
+  }
+
+  const palette = getPalette();
+  const minF = S.minS / 100;
+  const maxF = S.maxS / 100;
+  const body = [];
+
+  for (let y = 0; y < g.rows; y++) {
+    for (let x = 0; x < g.cols; x++) {
+      const ci = y * g.cols + x;
+      const l = tonemap(cells[ci]);
+      let idx = Math.floor((1 - l) * N);
+      if (idx >= N) idx = N - 1;
+      if (idx < 0) idx = 0;
+      if (S.invert) idx = N - 1 - idx;
+
+      if (!parsed[idx]) continue;
+      const id = symbolFor(idx, cellColor(S.cmode, slots[idx].color, rgb, ci, palette, S.sat));
+      if (!id) continue;
+
+      let size = cs;
+      if (S.scale) {
+        const band = 1 - ((1 - l) * N - Math.floor((1 - l) * N));
+        size = cs * (minF + (maxF - minF) * (S.invert ? 1 - band : band));
+      } else if (maxF !== 1) {
+        size = cs * maxF;
+      }
+      if (size <= 0.2) continue;
+
+      const px = (x * cs + cs / 2 - size / 2).toFixed(2);
+      const py = (y * cs + cs / 2 - size / 2).toFixed(2);
+      body.push(
+        `<use href="#${id}" x="${px}" y="${py}" width="${size.toFixed(2)}" height="${size.toFixed(2)}"/>`
+      );
+    }
+  }
+
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${out.width}" height="${out.height}" ` +
+    `viewBox="0 0 ${out.width} ${out.height}">` +
+    `<defs>${defs.join('')}</defs>` +
+    `<rect width="100%" height="100%" fill="${S.bg}"/>` +
+    body.join('') +
+    `</svg>`;
+
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  download(url, filename('svg'), true);
+  return null;
+}
+
+/* ---------------- WebM ---------------- */
+
+/** @type {MediaRecorder|null} */
+let rec = null;
+let chunks = [];
+
+/** @returns {boolean} se está gravando agora */
+function isRecording() {
+  return !!rec && rec.state === 'recording';
+}
+
+/**
+ * Liga ou desliga a gravação do canvas.
+ *
+ * Safari não implementa MediaRecorder pra canvas.captureStream, então lá isso
+ * simplesmente não existe — é limitação do navegador, não da ferramenta.
+ *
+ * @param {(state:'recording'|'stopped'|'unsupported', message?:string) => void} onState
+ */
+function toggleRecording(onState) {
+  if (isRecording()) {
+    rec.stop();
+    return;
+  }
+  if (!out) return;
+
+  try {
+    if (typeof MediaRecorder === 'undefined' || !out.captureStream) {
+      onState('unsupported', 'WebM não suportado neste navegador');
+      return;
+    }
+    const stream = out.captureStream(30);
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm';
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12000000 });
+    chunks = [];
+    rec.ondataavailable = (e) => {
+      if (e.data.size) chunks.push(e.data);
+    };
+    rec.onstop = () => {
+      const url = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+      download(url, filename('webm'), true);
+      chunks = [];
+      rec = null;
+      onState('stopped');
+    };
+    rec.start();
+    onState('recording');
+  } catch (err) {
+    rec = null;
+    onState('unsupported', 'WebM não suportado neste navegador');
+  }
+}
+return { exportPNG: exportPNG, exportSVG: exportSVG, init: init, isRecording: isRecording, toggleRecording: toggleRecording };
+})();
+/* ---------- js/presets.js ---------- */
+__m["js/presets.js"] = (function () {
+const { S, slots, N, setPalette, emit } = __m["js/state.js"];
+/**
+ * presets.js — salvar e carregar a configuração inteira como JSON.
+ *
+ * O preset embute os SVGs como string, não como caminho de arquivo. Um preset
+ * tem que atravessar máquina, e-mail e pendrive sem levar uma pasta junto.
+ *
+ * Tudo que entra é tratado como hostil: o arquivo pode ter sido editado à mão,
+ * pode ser de uma versão futura, pode ser um JSON qualquer que o usuário
+ * arrastou por engano. Nada disso pode deixar a ferramenta em tela branca.
+ */
+
+
+
+/** Versão do formato. Suba quando a forma do JSON mudar de maneira incompatível. */
+const PRESET_VERSION = 1;
+
+const FORMAT_ID = 'svg-dither-preset';
+
+/**
+ * Faixa válida de cada parâmetro numérico, espelhando os sliders da interface.
+ * Serve pra validar e pra fazer clamp de preset editado na mão.
+ * @type {Record<string, [number, number]>}
+ */
+const RANGES = {
+  cols: [8, 220],
+  minS: [0, 100],
+  maxS: [0, 140],
+  rotInt: [40, 2000],
+  bri: [-100, 100],
+  con: [-100, 100],
+  gam: [0.3, 3],
+  res: [600, 3000],
+  palN: [2, 8],
+  sat: [-100, 100],
+};
+
+const BOOLS = ['fill', 'invert', 'scale', 'rot', 'square', 'playing', 'autoPal'];
+const MODES = ['state', 'pixel', 'quant'];
+const HEX_RE = /^#[0-9a-f]{6}$/i;
+
+/* ---------------- montar ---------------- */
+
+/**
+ * Monta o objeto do preset a partir do estado atual.
+ * @param {number[][]} palette
+ * @returns {object}
+ */
+function buildPreset(palette) {
+  const params = {};
+  for (const key of Object.keys(S)) params[key] = S[key];
+
+  return {
+    format: FORMAT_ID,
+    version: PRESET_VERSION,
+    created: new Date().toISOString(),
+    params,
+    states: slots.map((s) => ({
+      on: !!s.on,
+      color: s.color,
+      name: s.name,
+      svgText: s.svgText || '',
+    })),
+    palette: (palette || []).map((p) => [p[0], p[1], p[2]]),
+  };
+}
+
+/**
+ * Serializa e dispara o download do preset.
+ * @param {number[][]} palette
+ */
+function downloadPreset(palette) {
+  const json = JSON.stringify(buildPreset(palette), null, 2);
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.download = 'svg-dither-preset-' + Date.now() + '.json';
+  a.href = url;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+/* ---------------- validar ---------------- */
+
+/**
+ * Lê e valida um preset. Nunca lança.
+ * @param {string} text conteúdo do arquivo
+ * @returns {{ok:true, data:object} | {ok:false, error:string}}
+ */
+function parsePreset(text) {
+  let obj;
+  try {
+    obj = JSON.parse(text);
+  } catch {
+    return { ok: false, error: 'não é um JSON válido' };
+  }
+
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return { ok: false, error: 'o arquivo não descreve um preset' };
+  }
+  if (obj.format !== FORMAT_ID) {
+    return { ok: false, error: 'este JSON não é um preset do SVG Dither' };
+  }
+
+  const version = Number(obj.version);
+  if (!Number.isInteger(version) || version < 1) {
+    return { ok: false, error: 'preset sem número de versão válido' };
+  }
+  if (version > PRESET_VERSION) {
+    return {
+      ok: false,
+      error: `preset da versão ${version}, esta build entende até a ${PRESET_VERSION}. Atualize a ferramenta.`,
+    };
+  }
+
+  if (!obj.params || typeof obj.params !== 'object') {
+    return { ok: false, error: 'preset sem o bloco de parâmetros' };
+  }
+  if (!Array.isArray(obj.states) || obj.states.length !== N) {
+    return { ok: false, error: `preset precisa ter exatamente ${N} estados` };
+  }
+  for (let i = 0; i < N; i++) {
+    const st = obj.states[i];
+    if (!st || typeof st !== 'object') {
+      return { ok: false, error: `estado ${i + 1} corrompido` };
+    }
+    if (typeof st.svgText !== 'string') {
+      return { ok: false, error: `estado ${i + 1} sem SVG` };
+    }
+    if (typeof st.color !== 'string' || !HEX_RE.test(st.color)) {
+      return { ok: false, error: `estado ${i + 1} com cor inválida` };
+    }
+  }
+
+  return { ok: true, data: obj };
+}
+
+/* ---------------- aplicar ---------------- */
+
+function clamp(v, [lo, hi]) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+/**
+ * Aplica um preset já validado ao estado. Emite `preset` no fim, uma vez só —
+ * a interface se re-sincroniza inteira em vez de reagir a quinze eventos.
+ *
+ * @param {object} data preset validado por `parsePreset`
+ */
+function applyPreset(data) {
+  const p = data.params || {};
+
+  for (const [key, range] of Object.entries(RANGES)) {
+    const v = Number(p[key]);
+    if (Number.isFinite(v)) S[key] = clamp(v, range);
+  }
+  for (const key of BOOLS) {
+    if (typeof p[key] === 'boolean') S[key] = p[key];
+  }
+  if (typeof p.bg === 'string' && HEX_RE.test(p.bg)) S.bg = p.bg;
+  if (MODES.includes(p.cmode)) S.cmode = p.cmode;
+
+  // cols e res chegam como inteiro
+  S.cols = Math.round(S.cols);
+  S.res = Math.round(S.res);
+  S.palN = Math.round(S.palN);
+
+  data.states.forEach((st, i) => {
+    const slot = slots[i];
+    slot.on = !!st.on;
+    slot.color = st.color;
+    slot.svgText = st.svgText;
+    slot.name = typeof st.name === 'string' && st.name ? st.name : 'preset';
+    slot.dirtyImg = true;
+    slot.error = null;
+  });
+
+  const pal = Array.isArray(data.palette)
+    ? data.palette
+        .filter((c) => Array.isArray(c) && c.length >= 3 && c.every((n) => Number.isFinite(n)))
+        .map((c) => [
+          Math.max(0, Math.min(255, Math.round(c[0]))),
+          Math.max(0, Math.min(255, Math.round(c[1]))),
+          Math.max(0, Math.min(255, Math.round(c[2]))),
+        ])
+    : [];
+  setPalette(pal);
+
+  emit('preset', data);
+}
+return { PRESET_VERSION: PRESET_VERSION, applyPreset: applyPreset, buildPreset: buildPreset, downloadPreset: downloadPreset, parsePreset: parsePreset };
+})();
+/* ---------- js/theme.js ---------- */
+__m["js/theme.js"] = (function () {
+/**
+ * theme.js — alternância entre o tema escuro e o claro da INTERFACE.
+ *
+ * Deixando explícito porque é fácil errar: isto não tem nenhuma relação com o
+ * "Background color" do grid. Aquilo é cor da composição, mora em `S.bg` e
+ * pertence ao usuário. Trocar o tema aqui nunca pode encostar naquilo.
+ *
+ * O tema inicial é escrito no <html> por um script inline no index.html, antes
+ * da primeira pintura. Este módulo cuida do resto do ciclo de vida.
+ */
+
+const STORAGE_KEY = 'svgdither:theme';
+const THEMES = ['dark', 'light'];
+
+/** @returns {'dark'|'light'} */
+function getTheme() {
+  const t = document.documentElement.getAttribute('data-theme');
+  return THEMES.includes(t) ? t : 'dark';
+}
+
+/** @returns {'dark'|'light'|null} o que está salvo, se houver escolha explícita */
+function stored() {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY);
+    return THEMES.includes(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Aplica um tema e persiste a escolha.
+ * @param {'dark'|'light'} theme
+ */
+function setTheme(theme) {
+  if (!THEMES.includes(theme)) return;
+  document.documentElement.setAttribute('data-theme', theme);
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // modo privado ou storage bloqueado: o tema vale só nesta sessão
+  }
+  syncButton();
+}
+
+/** Inverte o tema atual. */
+function toggleTheme() {
+  setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+}
+
+/** @type {HTMLButtonElement|null} */
+let btn = null;
+
+function syncButton() {
+  if (!btn) return;
+  const next = getTheme() === 'dark' ? 'claro' : 'escuro';
+  btn.setAttribute('aria-label', `Alternar para tema ${next}`);
+  btn.setAttribute('title', `Alternar para tema ${next}`);
+}
+
+/**
+ * Liga o botão de alternância e o acompanhamento da preferência do sistema.
+ * @param {HTMLButtonElement} button
+ */
+function initTheme(button) {
+  btn = button;
+  syncButton();
+  btn.addEventListener('click', toggleTheme);
+
+  // enquanto o usuário não escolher um tema na mão, seguimos o sistema ao vivo
+  const mq = matchMedia('(prefers-color-scheme: light)');
+  const follow = (e) => {
+    if (stored()) return;
+    document.documentElement.setAttribute('data-theme', e.matches ? 'light' : 'dark');
+    syncButton();
+  };
+  if (mq.addEventListener) mq.addEventListener('change', follow);
+  else if (mq.addListener) mq.addListener(follow); // Safari antigo
+}
+return { getTheme: getTheme, initTheme: initTheme, setTheme: setTheme, toggleTheme: toggleTheme };
+})();
+/* ---------- js/main.js ---------- */
+__m["js/main.js"] = (function () {
+const { S, slots, N, STATE_META, set, subscribe, getPalette, setPalette } = __m["js/state.js"];
+const { DEFAULT_SVG, buildSlotImage, getTint, clearTints } = __m["js/shapes.js"];
+const { extractPalette, rgb2hex, spreadOverStates } = __m["js/palette.js"];
+const renderer = __m["js/renderer.js"];
+const exporter = __m["js/export.js"];
+const sources = __m["js/sources.js"];
+const presets = __m["js/presets.js"];
+const { initTheme } = __m["js/theme.js"];
+/**
+ * main.js — boot e wiring.
+ *
+ * Este é o único módulo que conhece os ids do HTML. Ele lê a interface e
+ * escreve no estado; lê o estado e escreve na interface. Nenhuma regra de
+ * negócio mora aqui — se aparecer matemática de imagem neste arquivo, ela
+ * está no lugar errado.
+ */
+
+
+
+
+
+
+
+
+
+
+/** @param {string} id */
+const $ = (id) => document.getElementById(id);
+
+/** Acima disto, com fonte em movimento, o fps cai de verdade. */
+const PERF_COLS_WARN = 160;
+
+/* ================= lista de estados ================= */
+
+const statesEl = $('states');
+
+STATE_META.forEach(([name, sub], i) => {
+  const row = document.createElement('div');
+  row.className = 'state';
+  row.id = 'st' + i;
+  const label = `${name} · ${sub}`;
+  row.innerHTML = `
+    <div class="sw">
+      <input type="color" id="c${i}" value="#ffffff" aria-label="Cor de ${label}">
+    </div>
+    <div>
+      <div class="st-n">${name}</div>
+      <div class="st-s">${sub}</div>
+    </div>
+    <div class="st-a">
+      <canvas class="prev" id="pv${i}" width="26" height="26" role="img"
+              aria-label="Prévia da shape de ${label}"></canvas>
+      <button class="mini" id="up${i}" type="button"
+              aria-label="Subir SVG para ${label}" title="Subir SVG">↑</button>
+      <button class="mini" id="tg${i}" type="button" aria-pressed="true"
+              aria-label="Ligar ou desligar ${label}" title="Ligar/desligar estado">●</button>
+      <input type="file" id="fi${i}" accept=".svg,image/svg+xml" class="vh" tabindex="-1" aria-hidden="true">
+    </div>
+    <p class="st-err" id="er${i}" role="status" hidden></p>`;
+  statesEl.appendChild(row);
+});
+
+/**
+ * Pinta o quadradinho de prévia do estado: fundo da composição + shape tingida.
+ * @param {number} i
+ */
+function paintPreview(i) {
+  const cv = $('pv' + i);
+  if (!cv) return;
+  const x = cv.getContext('2d');
+  x.fillStyle = S.bg;
+  x.fillRect(0, 0, cv.width, cv.height);
+  const slot = slots[i];
+  const tint = getTint(i, slot.img, slot.color, S.fill);
+  if (tint && slot.on) x.drawImage(tint, 2, 2, cv.width - 4, cv.height - 4);
+}
+
+/**
+ * Mostra ou esconde o erro de um estado.
+ * @param {number} i
+ */
+function showSlotError(i) {
+  const el = $('er' + i);
+  const slot = slots[i];
+  if (slot.error) {
+    el.textContent = `${slot.name}: ${slot.error}`;
+    el.hidden = false;
+    $('st' + i).classList.add('err');
+  } else {
+    el.textContent = '';
+    el.hidden = true;
+    $('st' + i).classList.remove('err');
+  }
+}
+
+/**
+ * Recarrega a imagem de um slot e atualiza a prévia.
+ * @param {number} i
+ */
+async function rebuildSlot(i) {
+  clearTints();
+  await buildSlotImage(slots[i]);
+  showSlotError(i);
+  paintPreview(i);
+}
+
+async function rebuildAll() {
+  clearTints();
+  for (let i = 0; i < N; i++) {
+    await buildSlotImage(slots[i]);
+    showSlotError(i);
+    paintPreview(i);
+  }
+}
+
+function repaintAllPreviews() {
+  for (let i = 0; i < N; i++) paintPreview(i);
+}
+
+/* ================= controles dos estados ================= */
+
+for (let i = 0; i < N; i++) {
+  $('c' + i).addEventListener('input', (e) => {
+    slots[i].color = e.target.value;
+    rebuildSlot(i);
+  });
+
+  $('up' + i).addEventListener('click', () => $('fi' + i).click());
+
+  $('fi' + i).addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    e.target.value = ''; // permite subir o mesmo arquivo de novo
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      slots[i].svgText = String(reader.result);
+      slots[i].dirtyImg = true;
+      slots[i].name = file.name;
+      $('up' + i).classList.add('has');
+      rebuildSlot(i);
+    };
+    reader.onerror = () => {
+      slots[i].error = 'não consegui ler o arquivo';
+      showSlotError(i);
+    };
+    reader.readAsText(file);
+  });
+
+  $('tg' + i).addEventListener('click', () => {
+    slots[i].on = !slots[i].on;
+    syncSlotToggle(i);
+    paintPreview(i);
+  });
+}
+
+function syncSlotToggle(i) {
+  const on = slots[i].on;
+  $('st' + i).classList.toggle('off', !on);
+  $('tg' + i).setAttribute('aria-pressed', String(on));
+}
+
+$('bAllWhite').addEventListener('click', () => {
+  slots.forEach((s, i) => {
+    s.color = '#ffffff';
+    $('c' + i).value = '#ffffff';
+  });
+  rebuildAll();
+});
+
+$('bReset').addEventListener('click', () => {
+  slots.forEach((s, i) => {
+    s.svgText = DEFAULT_SVG[i];
+    s.dirtyImg = true;
+    s.name = 'padrão';
+    s.on = true;
+    s.error = null;
+    $('up' + i).classList.remove('has');
+    syncSlotToggle(i);
+  });
+  rebuildAll();
+});
+
+/* ================= sliders e checkboxes ================= */
+
+/**
+ * Liga um range ao estado e ao seu rótulo numérico.
+ * @param {string} id id do input
+ * @param {string} vid id do <b> que mostra o valor
+ * @param {string} key chave em S
+ * @param {(v:number)=>string} [fmt] formatação do rótulo
+ * @param {(v:number)=>number} [map] conversão do valor bruto pro estado
+ */
+function bindRange(id, vid, key, fmt, map) {
+  const el = $(id);
+  const label = $(vid);
+  el.addEventListener('input', () => {
+    const raw = +el.value;
+    set(key, map ? map(raw) : raw);
+    label.textContent = fmt ? fmt(raw) : String(raw);
+  });
+}
+
+bindRange('rCols', 'vCols', 'cols');
+bindRange('rMin', 'vMin', 'minS');
+bindRange('rMax', 'vMax', 'maxS');
+bindRange('rRot', 'vRot', 'rotInt', (v) => v + 'ms');
+bindRange('rBri', 'vBri', 'bri');
+bindRange('rCon', 'vCon', 'con');
+bindRange('rGam', 'vGam', 'gam', (v) => (v / 100).toFixed(2), (v) => v / 100);
+bindRange('rRes', 'vRes', 'res', (v) => v + 'px');
+
+$('cBg').addEventListener('input', (e) => set('bg', e.target.value));
+
+$('kFill').addEventListener('change', (e) => {
+  set('fill', e.target.checked);
+  clearTints();
+  rebuildAll();
+});
+$('kInv').addEventListener('change', (e) => set('invert', e.target.checked));
+$('kScale').addEventListener('change', (e) => set('scale', e.target.checked));
+$('kRot').addEventListener('change', (e) => set('rot', e.target.checked));
+$('kAuto').addEventListener('change', (e) => set('autoPal', e.target.checked));
+
+/* ================= cor ================= */
+
+const MODE_NOTE = {
+  state: 'Cor fixa por faixa tonal. A shape e a cor vêm do brilho.',
+  pixel: 'Cada célula puxa a cor real daquele ponto. A shape continua vindo do brilho.',
+  quant: 'A cor do pixel gruda na cor mais próxima da paleta. É o que dá o look chapado de pôster.',
+};
+const MODE_BTN = { state: 'mState', pixel: 'mPixel', quant: 'mQuant' };
+
+function setMode(mode) {
+  set('cmode', mode);
+  for (const [key, id] of Object.entries(MODE_BTN)) {
+    const on = key === mode;
+    $(id).classList.toggle('on', on);
+    $(id).setAttribute('aria-pressed', String(on));
+  }
+  $('modeNote').textContent = MODE_NOTE[mode];
+  if (mode === 'quant' && !getPalette().length) doExtract();
+}
+
+for (const [key, id] of Object.entries(MODE_BTN)) {
+  $(id).addEventListener('click', () => setMode(key));
+}
+
+function drawSwatches() {
+  const el = $('swatches');
+  const palette = getPalette();
+  el.innerHTML = '';
+  if (!palette.length) {
+    const empty = document.createElement('span');
+    empty.id = 'swEmpty';
+    empty.textContent = 'Nenhuma paleta extraída';
+    el.appendChild(empty);
+    return;
+  }
+  palette.forEach((p) => {
+    const hex = rgb2hex(p[0], p[1], p[2]);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sws';
+    b.style.background = hex;
+    b.title = hex + ' — clique pra copiar';
+    b.setAttribute('aria-label', `Copiar ${hex}`);
+    b.addEventListener('click', () => {
+      if (navigator.clipboard) navigator.clipboard.writeText(hex).catch(() => {});
+      b.title = 'copiado';
+    });
+    el.appendChild(b);
+  });
+}
+
+function doExtract() {
+  const info = sources.getSource();
+  setPalette(extractPalette(info ? info.el : null, S.palN));
+  drawSwatches();
+}
+
+function applyToStates() {
+  if (!getPalette().length) doExtract();
+  const colors = spreadOverStates(getPalette(), N);
+  if (!colors.length) return;
+  colors.forEach((hex, i) => {
+    slots[i].color = hex;
+    $('c' + i).value = hex;
+  });
+  clearTints();
+  repaintAllPreviews();
+}
+
+$('rPal').addEventListener('input', (e) => {
+  set('palN', +e.target.value);
+  $('vPal').textContent = String(S.palN);
+  if (getPalette().length) doExtract();
+});
+$('rSat').addEventListener('input', (e) => {
+  set('sat', +e.target.value);
+  $('vSat').textContent = String(S.sat);
+});
+$('bExtract').addEventListener('click', doExtract);
+$('bApply').addEventListener('click', applyToStates);
+
+/* ================= fonte ================= */
+
+const bRatio = $('bRatio');
+bRatio.addEventListener('click', () => {
+  set('square', !S.square);
+  syncRatioButton();
+});
+function syncRatioButton() {
+  bRatio.textContent = 'Proporção: ' + (S.square ? '1×1' : 'original');
+  bRatio.setAttribute('aria-pressed', String(S.square));
+}
+
+const bPlay = $('bPlay');
+bPlay.addEventListener('click', () => {
+  set('playing', !S.playing);
+  syncPlayButton();
+  sources.setPlaying(S.playing);
+});
+function syncPlayButton() {
+  bPlay.textContent = S.playing ? 'Pausar' : 'Tocar';
+}
+
+$('bImg').addEventListener('click', () => $('fImg').click());
+$('bVid').addEventListener('click', () => $('fVid').click());
+
+$('fImg').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (f) sources.loadFile(f, S.playing);
+});
+$('fVid').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (f) sources.loadFile(f, S.playing);
+});
+$('bCam').addEventListener('click', () => sources.startCam());
+
+sources.initDropZone($('drop'), () => S.playing);
+
+/** Mensagem de erro da seção Fonte. */
+function showSourceMessage(text, kind) {
+  const el = $('srcMsg');
+  if (!text) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  el.textContent = text;
+  el.className = 'note srcmsg ' + (kind || 'bad');
+  el.hidden = false;
+}
+
+sources.onError((message) => {
+  showSourceMessage(message, 'bad');
+  $('tagInfo').textContent = '— falha ao carregar';
+});
+
+sources.onChange((info) => {
+  showSourceMessage('');
+  $('tagInfo').textContent = `— ${info.type === 'cam' ? 'webcam' : info.type} ${info.w}×${info.h}`;
+  updatePerfWarning();
+  // pequeno atraso: com vídeo, o primeiro quadro pode não estar pronto
+  if (S.autoPal) setTimeout(doExtract, 60);
+});
+
+/* ================= aviso de performance ================= */
+
+function updatePerfWarning() {
+  const info = sources.getSource();
+  const moving = !!info && info.type !== 'image';
+  $('perfWarn').hidden = !(moving && S.cols > PERF_COLS_WARN);
+}
+
+/* ================= exportar ================= */
+
+$('bPng').addEventListener('click', () => exporter.exportPNG());
+$('bSvg').addEventListener('click', () => exporter.exportSVG());
+
+const bRec = $('bRec');
+bRec.addEventListener('click', () => {
+  exporter.toggleRecording((state, message) => {
+    if (state === 'recording') {
+      bRec.textContent = 'Parar gravação';
+      bRec.classList.add('on');
+      bRec.setAttribute('aria-pressed', 'true');
+    } else if (state === 'stopped') {
+      bRec.textContent = 'Gravar WebM';
+      bRec.classList.remove('on');
+      bRec.setAttribute('aria-pressed', 'false');
+    } else {
+      bRec.textContent = message || 'WebM não suportado';
+      bRec.disabled = true;
+    }
+  });
+});
+
+/* ================= presets ================= */
+
+function showPresetMessage(text, kind) {
+  const el = $('presetMsg');
+  if (!text) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  el.textContent = text;
+  el.className = 'note msg ' + kind;
+  el.hidden = false;
+}
+
+$('bSavePreset').addEventListener('click', () => {
+  presets.downloadPreset(getPalette());
+  showPresetMessage('preset salvo', 'ok');
+});
+
+$('bLoadPreset').addEventListener('click', () => $('fPreset').click());
+
+$('fPreset').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const result = presets.parsePreset(String(reader.result));
+    if (!result.ok) {
+      showPresetMessage('preset não carregado — ' + result.error, 'bad');
+      return;
+    }
+    presets.applyPreset(result.data);
+    syncUI();
+    await rebuildAll();
+    drawSwatches();
+    const broken = slots.filter((s) => s.error).length;
+    showPresetMessage(
+      broken
+        ? `preset carregado, mas ${broken} shape(s) não abriram`
+        : 'preset carregado: ' + file.name,
+      broken ? 'bad' : 'ok'
+    );
+  };
+  reader.onerror = () => showPresetMessage('não consegui ler o arquivo', 'bad');
+  reader.readAsText(file);
+});
+
+/* ================= sincronizar interface a partir do estado ================= */
+
+/**
+ * Escreve o estado inteiro de volta nos controles. Usado depois de carregar
+ * um preset — é mais barato e mais seguro que atualizar campo por campo.
+ */
+function syncUI() {
+  $('rCols').value = S.cols;
+  $('vCols').textContent = String(S.cols);
+  $('cBg').value = S.bg;
+  $('kFill').checked = S.fill;
+  $('kInv').checked = S.invert;
+
+  $('kScale').checked = S.scale;
+  $('rMin').value = S.minS;
+  $('vMin').textContent = String(S.minS);
+  $('rMax').value = S.maxS;
+  $('vMax').textContent = String(S.maxS);
+  $('kRot').checked = S.rot;
+  $('rRot').value = S.rotInt;
+  $('vRot').textContent = S.rotInt + 'ms';
+
+  $('rBri').value = S.bri;
+  $('vBri').textContent = String(S.bri);
+  $('rCon').value = S.con;
+  $('vCon').textContent = String(S.con);
+  $('rGam').value = Math.round(S.gam * 100);
+  $('vGam').textContent = S.gam.toFixed(2);
+
+  $('rRes').value = S.res;
+  $('vRes').textContent = S.res + 'px';
+
+  $('rPal').value = S.palN;
+  $('vPal').textContent = String(S.palN);
+  $('rSat').value = S.sat;
+  $('vSat').textContent = String(S.sat);
+  $('kAuto').checked = S.autoPal;
+
+  for (const [key, id] of Object.entries(MODE_BTN)) {
+    const on = key === S.cmode;
+    $(id).classList.toggle('on', on);
+    $(id).setAttribute('aria-pressed', String(on));
+  }
+  $('modeNote').textContent = MODE_NOTE[S.cmode];
+
+  slots.forEach((slot, i) => {
+    $('c' + i).value = slot.color;
+    syncSlotToggle(i);
+    $('up' + i).classList.toggle('has', slot.svgText !== DEFAULT_SVG[i]);
+  });
+
+  syncRatioButton();
+  syncPlayButton();
+  sources.setPlaying(S.playing);
+  updatePerfWarning();
+}
+
+/* ================= reações a mudanças de estado ================= */
+
+subscribe((key) => {
+  if (key === 'bg' || key === 'fill') repaintAllPreviews();
+  if (key === 'cols') updatePerfWarning();
+});
+
+/* ================= ciclo de vida ================= */
+
+// aba escondida: nada de queimar CPU desenhando pra ninguém
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) renderer.stop();
+  else renderer.start();
+});
+
+window.addEventListener('pagehide', () => {
+  renderer.stop();
+  sources.releaseAll();
+});
+
+/* ================= boot ================= */
+
+initTheme($('themeToggle'));
+
+const canvas = $('out');
+renderer.init(canvas);
+exporter.init(canvas);
+
+renderer.onStats(({ fps, cols, rows }) => {
+  $('fps').textContent = `${fps} fps · ${cols}×${rows} células`;
+});
+
+/**
+ * Imagem de teste: um gradiente radial. Serve pra ver a rampa dos 7 estados
+ * imediatamente, sem precisar carregar nada.
+ */
+function testPattern() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 800;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000';
+  x.fillRect(0, 0, 800, 800);
+  const gr = x.createRadialGradient(400, 340, 20, 400, 400, 420);
+  gr.addColorStop(0, '#fff');
+  gr.addColorStop(0.45, '#8a8a8a');
+  gr.addColorStop(1, '#000');
+  x.fillStyle = gr;
+  x.fillRect(0, 0, 800, 800);
+  return c.toDataURL();
+}
+
+rebuildAll().then(() => sources.setImage(testPattern()));
+renderer.start();
+return {};
+})();
+})();
+</script>
+</body>
+</html>
