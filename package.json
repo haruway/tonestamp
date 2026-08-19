@@ -1,0 +1,18 @@
+{
+  "name": "svg-dither",
+  "version": "1.0.0",
+  "description": "Tonal dithering that maps image luminance onto seven custom SVG shapes. Single HTML file, no install.",
+  "license": "MIT",
+  "author": "Danilo Mariani",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "contrast": "node scripts/contrast.mjs",
+    "serve": "python3 -m http.server 8080 --directory src"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
