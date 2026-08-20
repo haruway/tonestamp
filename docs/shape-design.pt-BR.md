@@ -1,3 +1,5 @@
+**Português** · [English](shape-design.md)
+
 # O raciocínio por trás das shapes
 
 Essa é a parte que ninguém explica, e é o que separa um resultado bonito de um borrão.
@@ -16,6 +18,8 @@ Então a regra é uma só:
 
 Se o estado 3 tem menos tinta que o estado 4, a imagem quebra. O rosto some, aparece um relevo falso, e a leitura vira ruído. É o erro número um.
 
+E é fácil de cometer sem perceber. O conjunto original saiu com duas inversões — um quadrado arredondado de 68,9% acima de um círculo de 66,5%, e um losango de 42,3% acima de um círculo de 36,3%. As duas estão corrigidas, e o `node scripts/check-ramp.mjs` mede o conjunto geometricamente e reprova o build se a rampa voltar a subir.
+
 ## Como calcular o peso de uma shape
 
 Você não precisa de matemática. Faz o teste do olho semicerrado: coloca as 7 shapes lado a lado, aperta os olhos até desfocar, e elas têm que virar um degradê limpo do branco ao preto. Se alguma pular fora da ordem, troca ela de lugar ou redesenha.
@@ -24,15 +28,17 @@ A escala dos shapes padrão que estão em [`shapes/default/`](../shapes/default/
 
 | Estado | Shape | Área preenchida |
 |---|---|---|
-| 1 · Highlights | Círculo r=46 | ~66% |
-| 2 · Light mid | Quadrado arredondado 84×84 | ~68% de caixa, mas menos peso visual pelo canto |
-| 3 · Mid high | Círculo r=34 | ~36% |
-| 4 · Midtones | Losango | ~21% |
-| 5 · Mid low | Anel (r=38, furo r=22) | ~30% de contorno, mas leitura mais leve pelo furo |
-| 6 · Dark mid | Quadrado 28×28 | ~8% |
-| 7 · Shadows | Ponto r=7 | ~1,5% |
+| 1 · Highlights | Círculo r=46 | 66,5% |
+| 2 · Light mid | Quadrado arredondado 80×80 | 62,5% |
+| 3 · Mid high | Círculo r=34 | 36,3% |
+| 4 · Midtones | Losango, diagonais 80 | 32,0% |
+| 5 · Mid low | Anel (r=38, furo r=22) | 30,2% |
+| 6 · Dark mid | Quadrado 28×28 | 7,8% |
+| 7 · Shadows | Ponto r=7 | 1,5% |
 
 Repare que não é uma rampa perfeitamente linear de porcentagem. **Área não é a mesma coisa que peso percebido.** Uma shape com furo no meio (o anel) lê mais leve do que a área dela sugere, porque o furo cria um respiro que o olho registra como luz. É por isso que ele está no estado 5 e não no 3.
+
+Repare também que os degraus são desiguais — uma queda de 26 pontos entre os estados 2 e 3, e depois três estados dentro de 6 pontos. Isso vem do conjunto original. É monotônico, então funciona, mas um conjunto com degraus mais bem distribuídos dá meios-tons mais suaves.
 
 ## Por que cada família de shape serve pra uma zona
 
@@ -77,3 +83,4 @@ Um atalho que funciona bem: pega um elemento da identidade da marca, o contrafor
 - [ ] Uma cor só por arquivo, a não ser que você vá desligar o *Fill solid* de propósito.
 - [ ] Testado numa foto de rosto, não só em gradiente.
 - [ ] Salvou como preset, pra não perder o conjunto.
+- [ ] Se for entrar em `shapes/`, o `node scripts/check-ramp.mjs` passa.

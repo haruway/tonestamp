@@ -1,129 +1,135 @@
-# Shot list — imagens do README
+**Português** · [English](README.md)
 
-Nada disso existe ainda. O repo hoje não tem **nenhum** registro visual da
-ferramenta rodando, e é a primeira coisa que alguém procura ao abrir a página.
-Esta é a lista pra gravar de uma vez só, numa sessão.
+# Imagens do readme — o que existe e o que falta
 
-Ordem de importância: o **01** sozinho já resolve 80% do problema. Se você só
-tiver ânimo pra um, faça o 01.
+As imagens estão ordenadas por quanto elas justificam o próprio espaço. Se você
+só for fazer uma das que faltam, faça a **#1**.
+
+## Situação
+
+| # | Arquivo | Situação | Impacto |
+|---|---|---|---|
+| 1 | `demo.gif` | ❌ **falta** | 🔥🔥🔥 de longe o mais importante |
+| 2 | `hero-still.png` | ❌ falta | 🔥🔥🔥 |
+| 3 | `modes-*.png` | ❌ falta | 🔥🔥 |
+| 4 | `ui-dark.png` | ✅ gerado | 🔥🔥 |
+| 5 | `shape-ramp.png` | ✅ gerado | 🔥🔥 |
+| 6 | `ui-light.png` | ✅ gerado | 🔥 |
+| 7 | `svg-illustrator.png` | ❌ falta | 🔥 |
+
+Os itens 4, 5 e 6 foram renderizados direto do repositório com Chrome headless
+e já estão no readme. Os que faltam precisam de foto de verdade e de mão humana
+no slider — por isso são seus.
 
 ---
 
-## 01 · `demo.gif` — o GIF do topo · **prioridade máxima**
+## 1 · `demo.gif` — topo do readme · **faça esse primeiro**
 
-O primeiro conteúdo do README, antes de qualquer texto longo.
+Nada mais comunica o que a ferramenta é em menos de três segundos. Imagem
+parada mostra o resultado; só o GIF mostra a *transformação*, e a transformação
+é o produto.
 
 | | |
 |---|---|
-| Formato | GIF (ou MP4 convertido) |
+| Formato | GIF (grave em .mov e converta) |
 | Duração | **máximo 15s** |
-| Peso | **abaixo de 5MB** |
-| Dimensão | 1200×750 aprox., 2:1.25 |
-| Onde entra | descomentar a linha em [`README.md`](../../README.md) logo abaixo dos badges |
+| Peso | **abaixo de 5MB** — GIF pesado o GitHub não carrega no celular |
+| Tamanho | uns 1200×750 |
+| Onde entra | descomente a linha logo abaixo dos badges em `README.md` e `README.pt-BR.md` |
 
-**Roteiro, na ordem:**
+**Roteiro, nessa ordem:**
 
-1. (0–2s) Tela parada com uma foto de rosto já carregada, grid ~90, preto e branco. Deixa o olho entender que é um retrato.
-2. (2–7s) **Arrasta o slider de Grid resolution** de 90 até ~25 e volta pra ~110. É o movimento mais legível que a ferramenta tem — mostra o conceito inteiro sem precisar de legenda.
-3. (7–11s) Clica em **Quantizar** e sobe a **Saturação** pra +70. A imagem vira pôster colorido na frente da pessoa.
-4. (11–15s) Liga **Scale shapes with midtones** e mexe no Max size. Termina num quadro bonito e parado.
+1. **(0–2s)** Quadro parado, uma foto de rosto já carregada, grid em torno de 90, preto e branco. Deixe o olho entender que é um retrato.
+2. **(2–7s)** **Arraste o slider de Grid resolution** de 90 até uns 25 e volte pra uns 110. É o movimento mais legível que a ferramenta tem — explica o conceito inteiro sem legenda.
+3. **(7–11s)** Clique em **Quantizar** e suba a **Saturação** pra +70. A imagem vira pôster colorido na frente de quem assiste.
+4. **(11–15s)** Ligue **Scale shapes with midtones** e mexa no Max size. Termine num quadro bonito e parado.
 
-Não mexa em mais nada. GIF com seis coisas acontecendo não comunica nada.
+Não mexa em mais nada. GIF com seis coisas acontecendo não comunica nenhuma.
 
-**Como gravar:** a própria ferramenta grava — botão **Gravar WebM**. Mas ele
-captura só o canvas, sem o painel. Pro GIF do topo você quer a tela inteira com
-os sliders aparecendo, então use captura de tela normal:
+**Como gravar.** A ferramenta tem o botão **Gravar WebM**, mas ele captura só o
+canvas, sem o painel. Pro GIF do topo você quer os sliders aparecendo, então
+use o gravador do sistema:
+
+- **⌘⇧5** → Opções → ligue **Mostrar cliques do mouse** → grave a janela do navegador.
+- Redimensione o navegador pra uns 1440×900 antes. Tela cheia em monitor grande deixa a interface minúscula no GIF.
+- Ligue o Não Perturbe. Notificação no meio do take queima a gravação.
+
+**Convertendo:**
 
 ```bash
-# macOS: Cmd+Shift+5, grava a janela do navegador, salva .mov
-# depois, com ffmpeg:
-ffmpeg -i captura.mov -vf "fps=12,scale=1200:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" -loop 0 demo.gif
-
-# se passar de 5MB, baixa pra fps=10 ou scale=1000
+brew install gifski
+gifski --fps 12 --width 1200 --quality 80 -o demo.gif gravacao.mov
+# passou de 5MB? baixe pra --fps 10 ou --width 1000
 ```
 
----
+## 2 · `hero-still.png` — o quadro que vende
 
-## 02 · `hero-still.png` — o quadro que vende
-
-Um resultado bonito, sem interface nenhuma. Serve de fallback caso o GIF fique
-pesado demais, e é a imagem que as pessoas vão copiar pro Twitter.
+Um resultado bonito, sem interface nenhuma. É a imagem que as pessoas printam e
+repostam, e é o plano B se o GIF ficar pesado demais.
 
 - Export **PNG** direto da ferramenta, 2040px.
-- Preset `retrato-editorial.json` numa foto de rosto com contraste bom.
+- Preset `retrato-editorial.json` numa foto de rosto com bom contraste.
 - Fundo `#0D0D0D`, shapes brancas.
 
----
+## 3 · Os três modos de cor — a comparação
 
-## 03 · Os três modos de cor — a comparação
+Três imagens lado a lado explicam em dois segundos o que o parágrafo de
+Recursos explica em cinquenta palavras.
 
-O README tem a seção **Features** falando dos três modos. Três imagens lado a
-lado explicam em dois segundos o que o parágrafo explica em cinquenta palavras.
-
-| Arquivo | Config |
+| Arquivo | Configuração |
 |---|---|
-| `mode-state.png` | modo **Estado**, cores brancas, fundo preto |
+| `mode-state.png` | modo **Estado**, shapes brancas, fundo preto |
 | `mode-pixel.png` | modo **Pixel**, saturação 0 |
-| `mode-quant.png` | modo **Quantizar**, paleta 3, saturação +70 |
+| `mode-quant.png` | modo **Quantizar**, paleta de 3, saturação +70 |
 
-**A mesma foto, o mesmo grid, o mesmo enquadramento nos três.** Se mudar a foto
-entre eles a comparação não vale nada. Export PNG a 1000px em cada um, só
-trocando o modo.
+**A mesma foto, o mesmo grid, o mesmo enquadramento nos três.** Se a foto mudar
+entre eles, a comparação não vale nada. Export PNG a 1000px em cada um,
+trocando só o modo.
 
-Monta no README como tabela de três colunas.
+## 4 · `ui-dark.png` ✅ pronto
 
----
+A interface inteira, tema escuro, rodando o gradiente de teste embutido. Fica
+logo abaixo dos badges, como a primeira coisa da página.
 
-## 04 · `shape-ramp.png` — as 7 shapes em linha
+Pra regerar depois de mudar layout:
 
-As sete shapes padrão lado a lado, do highlight à sombra, em fundo escuro.
-Ilustra a ideia de rampa monotônica melhor que a tabela de porcentagem.
+```bash
+node scripts/build.mjs
+# depois renderize dist/index.html em 1440×900 com device scale factor 2x
+```
 
-- Entra em [`docs/shape-design.md`](../shape-design.md), na seção "Como calcular o peso".
-- Já existe algo parecido em `_original/_preview-escala-tonal.png` — vale
-  regerar limpo, 1400×200, fundo `#0e0e13`.
-- **Bônus que vale muito:** a mesma imagem desfocada em gaussiana forte ao lado,
-  provando que vira um degradê limpo. É o "teste do olho semicerrado"
-  virando imagem.
+## 5 · `shape-ramp.png` ✅ pronto
 
----
+As sete shapes padrão em fileira com a porcentagem de área preenchida, e a
+mesma fileira bem desfocada embaixo.
 
-## 05 · `themes.png` — os dois temas
+É a melhor explicação isolada da ideia central, porque a fileira desfocada *é*
+o teste do olho semicerrado — dá pra ver ela virando um degradê limpo. Sustenta
+o argumento da "rampa monotônica" melhor que qualquer parágrafo.
 
-Print do painel no tema escuro e no claro, lado a lado, mesma configuração.
+## 6 · `ui-light.png` ✅ pronto
 
-Serve pra provar o ponto que o manual insiste: **o fundo da composição continua
-preto nos dois**. Deixe o `Background color` em `#000000` nas duas capturas e
-o contraste entre painel claro e composição escura fica evidente.
+A interface no tema claro, em inglês, com o fundo da composição ainda preto.
 
-Só o painel (372px de largura), não a tela toda.
+Esse último detalhe é o motivo da imagem existir: ele prova o que o manual
+repete, que o tema da interface e o fundo da composição são independentes.
+Mantenha o `Background color` em `#000000` se for regerar.
 
----
+## 7 · `svg-illustrator.png` — a prova do vetor
 
-## 06 · `svg-illustrator.png` — a prova do vetor
+Print do Illustrator com um SVG exportado aberto, camadas expandidas, mostrando
+os `<use>` como objetos editáveis e um deles selecionado.
 
-Print do Illustrator com um export SVG aberto, camadas expandidas, mostrando os
-`<use>` como objetos editáveis e um deles selecionado.
-
-Esse é o print que convence designer. "Exporta SVG de verdade" é fácil de
-escrever e fácil de duvidar — a captura resolve.
-
-Entra na seção **Features**, no bullet de vector export.
-
----
-
-## 07 · `mobile.png` — opcional
-
-Print em 390px de largura mostrando o layout empilhado. Só vale a pena se você
-quiser destacar responsividade; pra essa ferramenta não é o argumento principal.
+Esse é o print que convence designer. "Exporta vetor de verdade" é fácil de
+escrever e fácil de duvidar; a captura resolve.
 
 ---
 
 ## Checklist de publicação
 
-- [ ] `demo.gif` abaixo de 5MB, testado no preview do GitHub (GIF grande não carrega no mobile)
-- [ ] Linha do GIF descomentada no `README.md`
+- [ ] `demo.gif` abaixo de 5MB, testado no preview do GitHub
+- [ ] Linha do GIF descomentada nos **dois** readmes, `README.md` e `README.pt-BR.md`
 - [ ] Todo PNG passado por `pngquant` ou `oxipng`
-- [ ] Nenhuma foto de terceiro sem direito de uso — se for foto de banco, cite; se for sua, melhor
+- [ ] Nenhuma foto de terceiro sem direito de uso — se for de banco, cite; sua é melhor
 - [ ] **Nada de arte do Makoto San** nas capturas: o repo credita a técnica, não redistribui o trabalho
-- [ ] Link da demo do GitHub Pages testado depois do primeiro deploy
+- [ ] Link do GitHub Pages testado depois do primeiro deploy

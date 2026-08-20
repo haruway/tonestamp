@@ -1,3 +1,5 @@
+**Português** · [English](README.md)
+
 # Shapes
 
 ## `default/`
@@ -9,13 +11,17 @@ arquivo pra você abrir no Illustrator e usar de ponto de partida.
 
 | Arquivo | Estado | Área preenchida |
 |---|---|---|
-| `01-highlights-circulo-cheio.svg` | 1 · Highlights | ~66% |
-| `02-light-mid-quadrado-arredondado.svg` | 2 · Light mid | ~68% de caixa |
-| `03-mid-high-circulo-medio.svg` | 3 · Mid high | ~36% |
-| `04-midtones-losango.svg` | 4 · Midtones | ~21% |
-| `05-mid-low-anel.svg` | 5 · Mid low | ~30% de contorno |
-| `06-dark-mid-quadrado-pequeno.svg` | 6 · Dark mid | ~8% |
-| `07-shadows-ponto.svg` | 7 · Shadows | ~1,5% |
+| `01-highlights-circulo-cheio.svg` | 1 · Highlights | 66,5% |
+| `02-light-mid-quadrado-arredondado.svg` | 2 · Light mid | 62,5% |
+| `03-mid-high-circulo-medio.svg` | 3 · Mid high | 36,3% |
+| `04-midtones-losango.svg` | 4 · Midtones | 32,0% |
+| `05-mid-low-anel.svg` | 5 · Mid low | 30,2% |
+| `06-dark-mid-quadrado-pequeno.svg` | 6 · Dark mid | 7,8% |
+| `07-shadows-ponto.svg` | 7 · Shadows | 1,5% |
+
+A área tem que continuar caindo do 1 ao 7. O `node scripts/check-ramp.mjs`
+mede cada shape geometricamente e reprova se a rampa subir — ele também
+confere que estes arquivos ainda batem com a constante `DEFAULT_SVG` do código.
 
 Se você mudar um destes arquivos, **atualize também a constante `DEFAULT_SVG`**
 em `src/js/shapes.js` e rode `node scripts/build.mjs`. O que a ferramenta carrega
@@ -25,7 +31,7 @@ em `src/js/shapes.js` e rode `node scripts/build.mjs`. O que a ferramenta carreg
 
 A explicação longa — peso óptico, por que a rampa tem que ser monotônica, quais
 famílias de shape servem pra qual zona tonal, e o fluxo no Illustrator — está em
-[`docs/shape-design.md`](../docs/shape-design.md).
+[`docs/shape-design.pt-BR.md`](../docs/shape-design.pt-BR.md).
 
 O resumo de bolso:
 
@@ -43,4 +49,4 @@ trabalho.
 
 Conjuntos novos são bem-vindos como pasta irmã de `default/`, com nome
 descritivo (`brutalist/`, `organic/`, `halftone-classico/`) e um `README.md`
-curto mostrando a rampa. Veja [CONTRIBUTING.md](../CONTRIBUTING.md).
+curto mostrando a rampa. Veja [CONTRIBUTING.pt-BR.md](../CONTRIBUTING.pt-BR.md).

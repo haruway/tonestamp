@@ -1,6 +1,8 @@
+**Português** · [English](manual.md)
+
 # Tonestamp — manual da ferramenta
 
-Ferramenta de dithering por mapeamento tonal em 7 estados. Arquivo HTML único, roda offline no navegador, sem instalação e sem servidor. Abre com duplo clique.
+Ferramenta de meio-tom por mapeamento tonal em 7 estados. Arquivo HTML único, roda offline no navegador, sem instalação e sem servidor. Abre com duplo clique.
 
 Baseada na técnica que o Anton Burmistrov (@antoncreations) mostrou no reel de 18/05/2026, com algumas coisas a mais.
 
@@ -201,5 +203,5 @@ Grid 160, uma shape só repetida em todos os estados variando só a cor, satura�
 - Webcam exige HTTPS ou `localhost` em alguns navegadores. Abrindo o arquivo direto do disco, o Chrome geralmente libera, o Safari às vezes não.
 - A gravação WebM não funciona no Safari. Use Chrome ou Firefox.
 - SVG multicolorido com gradiente não vai funcionar bem com *Fill solid* ligado, porque o preenchimento sobrescreve tudo. Desligue o fill nesse caso.
-- As fontes (Space Grotesk e IBM Plex Mono) vêm do Google Fonts. Sem internet a ferramenta funciona igual, só cai pra uma monoespaçada do sistema.
+- As fontes (Bricolage Grotesque e IBM Plex Mono) vão embutidas no arquivo. Não há requisição de rede nenhuma: offline a tipografia é idêntica.
 - Rodando `src/index.html` direto do disco, os ES modules são bloqueados pelo navegador. Use `dist/index.html`, ou sirva `src/` por HTTP (`npm run serve`).

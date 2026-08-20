@@ -1,3 +1,5 @@
+**Português** · [English](README.md)
+
 # Presets de exemplo
 
 Quatro configurações prontas, uma pra cada combinação documentada no
