@@ -39,7 +39,7 @@ export function onChange(fn) {
   return () => changeListeners.delete(fn);
 }
 
-/** @param {(message: string) => void} fn */
+/** @param {(key: string, vars?: object) => void} fn */
 export function onError(fn) {
   errorListeners.add(fn);
   return () => errorListeners.delete(fn);
@@ -49,8 +49,14 @@ function emitChange() {
   for (const fn of changeListeners) fn(current);
 }
 
-function fail(message) {
-  for (const fn of errorListeners) fn(message);
+/**
+ * Avisa os ouvintes com uma CHAVE de tradução, nunca com uma frase pronta.
+ * Este módulo não conhece idioma; quem traduz é o main.js.
+ * @param {string} key
+ * @param {object} [vars]
+ */
+function fail(key, vars) {
+  for (const fn of errorListeners) fn(key, vars);
 }
 
 /** @returns {SourceInfo|null} */
@@ -111,7 +117,7 @@ export function setImage(url) {
   };
   im.onerror = () => {
     if (isBlob) URL.revokeObjectURL(url);
-    fail('não consegui abrir essa imagem');
+    fail('err.src.image');
   };
   im.src = url;
 }
@@ -129,7 +135,7 @@ export function setVideo(url, playing) {
   v.playsInline = true;
   // o elemento precisa da URL viva pra fazer loop, então ela fica retida
   if (url.startsWith('blob:')) heldUrl = url;
-  v.addEventListener('error', () => fail('não consegui abrir esse vídeo'));
+  v.addEventListener('error', () => fail('err.src.video'));
   v.addEventListener(
     'loadeddata',
     () => {
@@ -148,7 +154,7 @@ export function setVideo(url, playing) {
 export async function startCam() {
   prepareForNewSource();
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    fail('este navegador não expõe a câmera. Chrome ou Firefox resolvem.');
+    fail('err.cam.unsupported');
     return false;
   }
   try {
@@ -163,27 +169,28 @@ export async function startCam() {
     return true;
   } catch (err) {
     stopCam();
-    fail(cameraErrorMessage(err));
+    fail(...cameraError(err));
     return false;
   }
 }
 
 /**
- * Traduz o erro de getUserMedia pra algo acionável.
+ * Mapeia o erro de getUserMedia pra uma chave acionável.
  * @param {DOMException|Error} err
+ * @returns {[string, object?]} chave e variáveis pra interpolação
  */
-function cameraErrorMessage(err) {
+function cameraError(err) {
   switch (err && err.name) {
     case 'NotAllowedError':
     case 'SecurityError':
-      return 'câmera negada. Libere a permissão no cadeado da barra de endereço. Abrindo o arquivo direto do disco, o Safari costuma bloquear — use Chrome, ou sirva por https.';
+      return ['err.cam.denied'];
     case 'NotFoundError':
     case 'DevicesNotFoundError':
-      return 'nenhuma câmera encontrada neste computador.';
+      return ['err.cam.notFound'];
     case 'NotReadableError':
-      return 'a câmera está ocupada por outro aplicativo.';
+      return ['err.cam.busy'];
     default:
-      return 'não consegui abrir a câmera' + (err && err.name ? ` (${err.name})` : '') + '.';
+      return ['err.cam.generic', { name: (err && err.name) || '?' }];
   }
 }
 
@@ -211,7 +218,7 @@ export function loadFile(file, playing) {
   // SVG cai aqui quando o usuário arrasta uma shape por engano: ignora,
   // shape se sobe pelo botão do estado
   if (file.type.startsWith('image/svg')) {
-    fail('SVG é shape, não é fonte. Suba pelo ↑ de um estado.');
+    fail('err.src.svg');
     return false;
   }
   if (file.type.startsWith('image/')) {
@@ -222,7 +229,7 @@ export function loadFile(file, playing) {
     setVideo(URL.createObjectURL(file), playing);
     return true;
   }
-  fail('formato não suportado: ' + (file.type || 'desconhecido'));
+  fail('err.src.format', { type: file.type || null });
   return false;
 }
 

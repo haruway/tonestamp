@@ -9,6 +9,8 @@
  * da primeira pintura. Este módulo cuida do resto do ciclo de vida.
  */
 
+import { t, onLangChange } from './i18n.js';
+
 const STORAGE_KEY = 'tonestamp:theme';
 const THEMES = ['dark', 'light'];
 
@@ -53,9 +55,9 @@ let btn = null;
 
 function syncButton() {
   if (!btn) return;
-  const next = getTheme() === 'dark' ? 'claro' : 'escuro';
-  btn.setAttribute('aria-label', `Alternar para tema ${next}`);
-  btn.setAttribute('title', `Alternar para tema ${next}`);
+  const label = t(getTheme() === 'dark' ? 'theme.toLight' : 'theme.toDark');
+  btn.setAttribute('aria-label', label);
+  btn.setAttribute('title', label);
 }
 
 /**
@@ -66,6 +68,8 @@ export function initTheme(button) {
   btn = button;
   syncButton();
   btn.addEventListener('click', toggleTheme);
+  // o rótulo é texto traduzido, então acompanha a troca de idioma
+  onLangChange(syncButton);
 
   // enquanto o usuário não escolher um tema na mão, seguimos o sistema ao vivo
   const mq = matchMedia('(prefers-color-scheme: light)');

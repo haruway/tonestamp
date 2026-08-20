@@ -575,3 +575,28 @@ input[type="file"]:not(.vh) {
     letter-spacing: 0.1em;
   }
 }
+
+/* ---------- ações do cabeçalho ---------- */
+
+.head-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+/* variante do botão de ícone que carrega texto curto (o código do idioma) */
+.icon-btn-text {
+  width: auto;
+  min-width: 32px;
+  padding: 0 7px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.icon-btn-text:hover {
+  color: var(--ink);
+}

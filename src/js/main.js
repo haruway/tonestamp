@@ -15,6 +15,7 @@ import * as exporter from './export.js';
 import * as sources from './sources.js';
 import * as presets from './presets.js';
 import { initTheme } from './theme.js';
+import { initI18n, t, onLangChange, getLang } from './i18n.js';
 
 /** @param {string} id */
 const $ = (id) => document.getElementById(id);
@@ -30,27 +31,39 @@ STATE_META.forEach(([name, sub], i) => {
   const row = document.createElement('div');
   row.className = 'state';
   row.id = 'st' + i;
-  const label = `${name} · ${sub}`;
   row.innerHTML = `
     <div class="sw">
-      <input type="color" id="c${i}" value="#ffffff" aria-label="Cor de ${label}">
+      <input type="color" id="c${i}" value="#ffffff">
     </div>
     <div>
       <div class="st-n">${name}</div>
       <div class="st-s">${sub}</div>
     </div>
     <div class="st-a">
-      <canvas class="prev" id="pv${i}" width="26" height="26" role="img"
-              aria-label="Prévia da shape de ${label}"></canvas>
-      <button class="mini" id="up${i}" type="button"
-              aria-label="Subir SVG para ${label}" title="Subir SVG">↑</button>
-      <button class="mini" id="tg${i}" type="button" aria-pressed="true"
-              aria-label="Ligar ou desligar ${label}" title="Ligar/desligar estado">●</button>
+      <canvas class="prev" id="pv${i}" width="26" height="26" role="img"></canvas>
+      <button class="mini" id="up${i}" type="button">↑</button>
+      <button class="mini" id="tg${i}" type="button" aria-pressed="true">●</button>
       <input type="file" id="fi${i}" accept=".svg,image/svg+xml" class="vh" tabindex="-1" aria-hidden="true">
     </div>
     <p class="st-err" id="er${i}" role="status" hidden></p>`;
   statesEl.appendChild(row);
 });
+
+/**
+ * Escreve os rótulos acessíveis dos 7 cards. Fica separado da criação porque
+ * precisa rodar de novo a cada troca de idioma.
+ */
+function syncStateLabels() {
+  STATE_META.forEach(([name, sub], i) => {
+    const state = `${name} · ${sub}`;
+    $('c' + i).setAttribute('aria-label', t('state.colorAria', { state }));
+    $('pv' + i).setAttribute('aria-label', t('state.previewAria', { state }));
+    $('up' + i).setAttribute('aria-label', t('state.uploadAria', { state }));
+    $('up' + i).setAttribute('title', t('state.uploadTitle'));
+    $('tg' + i).setAttribute('aria-label', t('state.toggleAria', { state }));
+    $('tg' + i).setAttribute('title', t('state.toggleTitle'));
+  });
+}
 
 /**
  * Pinta o quadradinho de prévia do estado: fundo da composição + shape tingida.
@@ -75,7 +88,8 @@ function showSlotError(i) {
   const el = $('er' + i);
   const slot = slots[i];
   if (slot.error) {
-    el.textContent = `${slot.name}: ${slot.error}`;
+    // slot.error é uma chave vinda de shapes.js, não uma frase
+    el.textContent = `${slot.name}: ${t(slot.error)}`;
     el.hidden = false;
     $('st' + i).classList.add('err');
   } else {
@@ -132,7 +146,7 @@ for (let i = 0; i < N; i++) {
       rebuildSlot(i);
     };
     reader.onerror = () => {
-      slots[i].error = 'não consegui ler o arquivo';
+      slots[i].error = 'err.file.read';
       showSlotError(i);
     };
     reader.readAsText(file);
@@ -215,11 +229,7 @@ $('kAuto').addEventListener('change', (e) => set('autoPal', e.target.checked));
 
 /* ================= cor ================= */
 
-const MODE_NOTE = {
-  state: 'Cor fixa por faixa tonal. A shape e a cor vêm do brilho.',
-  pixel: 'Cada célula puxa a cor real daquele ponto. A shape continua vindo do brilho.',
-  quant: 'A cor do pixel gruda na cor mais próxima da paleta. É o que dá o look chapado de pôster.',
-};
+const MODE_NOTE = { state: 'note.state', pixel: 'note.pixel', quant: 'note.quant' };
 const MODE_BTN = { state: 'mState', pixel: 'mPixel', quant: 'mQuant' };
 
 function setMode(mode) {
@@ -229,7 +239,7 @@ function setMode(mode) {
     $(id).classList.toggle('on', on);
     $(id).setAttribute('aria-pressed', String(on));
   }
-  $('modeNote').textContent = MODE_NOTE[mode];
+  $('modeNote').textContent = t(MODE_NOTE[mode]);
   if (mode === 'quant' && !getPalette().length) doExtract();
 }
 
@@ -244,7 +254,7 @@ function drawSwatches() {
   if (!palette.length) {
     const empty = document.createElement('span');
     empty.id = 'swEmpty';
-    empty.textContent = 'Nenhuma paleta extraída';
+    empty.textContent = t('sw.empty');
     el.appendChild(empty);
     return;
   }
@@ -254,11 +264,11 @@ function drawSwatches() {
     b.type = 'button';
     b.className = 'sws';
     b.style.background = hex;
-    b.title = hex + ' — clique pra copiar';
-    b.setAttribute('aria-label', `Copiar ${hex}`);
+    b.title = t('sw.copy', { hex });
+    b.setAttribute('aria-label', t('sw.copyAria', { hex }));
     b.addEventListener('click', () => {
       if (navigator.clipboard) navigator.clipboard.writeText(hex).catch(() => {});
-      b.title = 'copiado';
+      b.title = t('sw.copied');
     });
     el.appendChild(b);
   });
@@ -302,7 +312,7 @@ bRatio.addEventListener('click', () => {
   syncRatioButton();
 });
 function syncRatioButton() {
-  bRatio.textContent = 'Proporção: ' + (S.square ? '1×1' : 'original');
+  bRatio.textContent = t(S.square ? 'btn.ratio.square' : 'btn.ratio.original');
   bRatio.setAttribute('aria-pressed', String(S.square));
 }
 
@@ -313,7 +323,7 @@ bPlay.addEventListener('click', () => {
   sources.setPlaying(S.playing);
 });
 function syncPlayButton() {
-  bPlay.textContent = S.playing ? 'Pausar' : 'Tocar';
+  bPlay.textContent = t(S.playing ? 'btn.pause' : 'btn.play');
 }
 
 $('bImg').addEventListener('click', () => $('fImg').click());
@@ -346,18 +356,32 @@ function showSourceMessage(text, kind) {
   el.hidden = false;
 }
 
-sources.onError((message) => {
-  showSourceMessage(message, 'bad');
-  $('tagInfo').textContent = '— falha ao carregar';
+sources.onError((key, vars) => {
+  // sources.js manda chave, não frase: a tradução é aqui
+  const filled = { ...vars };
+  if (filled.type === null || filled.type === undefined) filled.type = t('err.src.unknownType');
+  showSourceMessage(t(key, filled), 'bad');
+  $('tagInfo').textContent = t('tag.failed');
 });
 
 sources.onChange((info) => {
   showSourceMessage('');
-  $('tagInfo').textContent = `— ${info.type === 'cam' ? 'webcam' : info.type} ${info.w}×${info.h}`;
+  syncSourceTag();
   updatePerfWarning();
   // pequeno atraso: com vídeo, o primeiro quadro pode não estar pronto
   if (S.autoPal) setTimeout(doExtract, 60);
 });
+
+/** Escreve o rótulo da fonte ativa no canto do stage. */
+function syncSourceTag() {
+  const info = sources.getSource();
+  if (!info) {
+    $('tagInfo').textContent = t('tag.none');
+    return;
+  }
+  const type = t(info.type === 'cam' ? 'tag.webcam' : info.type === 'video' ? 'tag.video' : 'tag.image');
+  $('tagInfo').textContent = t('tag.source', { type, w: info.w, h: info.h });
+}
 
 /* ================= aviso de performance ================= */
 
@@ -376,15 +400,15 @@ const bRec = $('bRec');
 bRec.addEventListener('click', () => {
   exporter.toggleRecording((state, message) => {
     if (state === 'recording') {
-      bRec.textContent = 'Parar gravação';
+      bRec.textContent = t('btn.recStop');
       bRec.classList.add('on');
       bRec.setAttribute('aria-pressed', 'true');
     } else if (state === 'stopped') {
-      bRec.textContent = 'Gravar WebM';
+      bRec.textContent = t('btn.rec');
       bRec.classList.remove('on');
       bRec.setAttribute('aria-pressed', 'false');
     } else {
-      bRec.textContent = message || 'WebM não suportado';
+      bRec.textContent = t('btn.recUnsupported');
       bRec.disabled = true;
     }
   });
@@ -406,7 +430,7 @@ function showPresetMessage(text, kind) {
 
 $('bSavePreset').addEventListener('click', () => {
   presets.downloadPreset(getPalette());
-  showPresetMessage('preset salvo', 'ok');
+  showPresetMessage(t('msg.presetSaved'), 'ok');
 });
 
 $('bLoadPreset').addEventListener('click', () => $('fPreset').click());
@@ -419,7 +443,7 @@ $('fPreset').addEventListener('change', (e) => {
   reader.onload = async () => {
     const result = presets.parsePreset(String(reader.result));
     if (!result.ok) {
-      showPresetMessage('preset não carregado — ' + result.error, 'bad');
+      showPresetMessage(t('msg.presetFailed', { reason: t(result.error, result.vars) }), 'bad');
       return;
     }
     presets.applyPreset(result.data);
@@ -429,12 +453,12 @@ $('fPreset').addEventListener('change', (e) => {
     const broken = slots.filter((s) => s.error).length;
     showPresetMessage(
       broken
-        ? `preset carregado, mas ${broken} shape(s) não abriram`
-        : 'preset carregado: ' + file.name,
+        ? t('msg.presetPartial', { n: broken })
+        : t('msg.presetLoaded', { name: file.name }),
       broken ? 'bad' : 'ok'
     );
   };
-  reader.onerror = () => showPresetMessage('não consegui ler o arquivo', 'bad');
+  reader.onerror = () => showPresetMessage(t('err.file.read'), 'bad');
   reader.readAsText(file);
 });
 
@@ -481,7 +505,7 @@ function syncUI() {
     $(id).classList.toggle('on', on);
     $(id).setAttribute('aria-pressed', String(on));
   }
-  $('modeNote').textContent = MODE_NOTE[S.cmode];
+  $('modeNote').textContent = t(MODE_NOTE[S.cmode]);
 
   slots.forEach((slot, i) => {
     $('c' + i).value = slot.color;
@@ -493,6 +517,21 @@ function syncUI() {
   syncPlayButton();
   sources.setPlaying(S.playing);
   updatePerfWarning();
+}
+
+/**
+ * Reescreve tudo que é texto dinâmico — o que `applyStatic` do i18n não
+ * alcança, porque é gerado em JS ou depende do estado atual.
+ */
+function syncDynamicText() {
+  syncStateLabels();
+  syncRatioButton();
+  syncPlayButton();
+  syncSourceTag();
+  $('modeNote').textContent = t(MODE_NOTE[S.cmode]);
+  if (!exporter.isRecording()) bRec.textContent = t('btn.rec');
+  drawSwatches();
+  for (let i = 0; i < N; i++) showSlotError(i);
 }
 
 /* ================= reações a mudanças de estado ================= */
@@ -517,14 +556,16 @@ window.addEventListener('pagehide', () => {
 
 /* ================= boot ================= */
 
+initI18n($('langToggle'));
 initTheme($('themeToggle'));
+onLangChange(syncDynamicText);
 
 const canvas = $('out');
 renderer.init(canvas);
 exporter.init(canvas);
 
 renderer.onStats(({ fps, cols, rows }) => {
-  $('fps').textContent = `${fps} fps · ${cols}×${rows} células`;
+  $('fps').textContent = t('stats.fps', { fps, cols, rows });
 });
 
 /**
@@ -545,6 +586,8 @@ function testPattern() {
   x.fillRect(0, 0, 800, 800);
   return c.toDataURL();
 }
+
+syncDynamicText();
 
 rebuildAll().then(() => sources.setImage(testPattern()));
 renderer.start();

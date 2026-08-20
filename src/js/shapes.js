@@ -38,20 +38,23 @@ export const DEFAULT_SVG = [
  * Lança se o texto não for um SVG válido — o protótipo falhava em silêncio
  * aqui, e é o que gerava shape sumida sem explicação.
  *
+ * A mensagem do erro é uma CHAVE de tradução, não uma frase: este módulo não
+ * conhece idioma. Quem traduz é o main.js.
+ *
  * @param {string} text código-fonte do SVG
  * @returns {{el: Element, viewBox: string}}
  */
 export function parseSvg(text) {
   if (typeof text !== 'string' || !text.trim()) {
-    throw new Error('arquivo vazio');
+    throw new Error('err.svg.empty');
   }
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
   if (doc.querySelector('parsererror')) {
-    throw new Error('XML malformado');
+    throw new Error('err.svg.malformed');
   }
   const el = doc.documentElement;
   if (!el || el.nodeName.toLowerCase() !== 'svg') {
-    throw new Error('a raiz do arquivo não é <svg>');
+    throw new Error('err.svg.notSvg');
   }
   const viewBox =
     el.getAttribute('viewBox') ||
@@ -82,20 +85,20 @@ export function svgToImage(text) {
       el.setAttribute('height', String(TINT_PX));
       payload = new XMLSerializer().serializeToString(el);
     } catch (err) {
-      reject(err instanceof Error ? err : new Error('SVG inválido'));
+      reject(err instanceof Error ? err : new Error('err.svg.malformed'));
       return;
     }
 
     const im = new Image();
     im.onload = () => resolve(im);
-    im.onerror = () => reject(new Error('o navegador não conseguiu desenhar este SVG'));
+    im.onerror = () => reject(new Error('err.svg.draw'));
     im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(payload);
   });
 }
 
 /**
  * Carrega a imagem de um slot, guardando o erro no próprio slot em vez de
- * estourar. Devolve a mensagem de erro, ou null se deu certo.
+ * estourar. Devolve a chave de erro, ou null se deu certo.
  *
  * @param {import('./state.js').Slot} slot
  * @returns {Promise<string|null>}
@@ -115,7 +118,7 @@ export async function buildSlotImage(slot) {
   } catch (err) {
     slot.img = null;
     slot.dirtyImg = false;
-    slot.error = err.message || 'SVG inválido';
+    slot.error = err.message || 'err.svg.malformed';
     return slot.error;
   }
 }

@@ -82,51 +82,56 @@ export function downloadPreset(palette) {
 
 /**
  * Lê e valida um preset. Nunca lança.
+ *
+ * O erro volta como CHAVE de tradução mais as variáveis pra interpolar. Este
+ * módulo não conhece idioma; quem monta a frase é o main.js.
+ *
  * @param {string} text conteúdo do arquivo
- * @returns {{ok:true, data:object} | {ok:false, error:string}}
+ * @returns {{ok:true, data:object} | {ok:false, error:string, vars?:object}}
  */
 export function parsePreset(text) {
   let obj;
   try {
     obj = JSON.parse(text);
   } catch {
-    return { ok: false, error: 'não é um JSON válido' };
+    return { ok: false, error: 'err.preset.json' };
   }
 
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-    return { ok: false, error: 'o arquivo não descreve um preset' };
+    return { ok: false, error: 'err.preset.notObject' };
   }
   if (obj.format !== FORMAT_ID) {
-    return { ok: false, error: 'este JSON não é um preset do Tonestamp' };
+    return { ok: false, error: 'err.preset.format' };
   }
 
   const version = Number(obj.version);
   if (!Number.isInteger(version) || version < 1) {
-    return { ok: false, error: 'preset sem número de versão válido' };
+    return { ok: false, error: 'err.preset.noVersion' };
   }
   if (version > PRESET_VERSION) {
     return {
       ok: false,
-      error: `preset da versão ${version}, esta build entende até a ${PRESET_VERSION}. Atualize a ferramenta.`,
+      error: 'err.preset.newer',
+      vars: { found: version, max: PRESET_VERSION },
     };
   }
 
   if (!obj.params || typeof obj.params !== 'object') {
-    return { ok: false, error: 'preset sem o bloco de parâmetros' };
+    return { ok: false, error: 'err.preset.noParams' };
   }
   if (!Array.isArray(obj.states) || obj.states.length !== N) {
-    return { ok: false, error: `preset precisa ter exatamente ${N} estados` };
+    return { ok: false, error: 'err.preset.stateCount', vars: { n: N } };
   }
   for (let i = 0; i < N; i++) {
     const st = obj.states[i];
     if (!st || typeof st !== 'object') {
-      return { ok: false, error: `estado ${i + 1} corrompido` };
+      return { ok: false, error: 'err.preset.stateCorrupt', vars: { i: i + 1 } };
     }
     if (typeof st.svgText !== 'string') {
-      return { ok: false, error: `estado ${i + 1} sem SVG` };
+      return { ok: false, error: 'err.preset.stateNoSvg', vars: { i: i + 1 } };
     }
     if (typeof st.color !== 'string' || !HEX_RE.test(st.color)) {
-      return { ok: false, error: `estado ${i + 1} com cor inválida` };
+      return { ok: false, error: 'err.preset.stateColor', vars: { i: i + 1 } };
     }
   }
 
