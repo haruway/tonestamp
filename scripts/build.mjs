@@ -420,20 +420,67 @@ function bundle(modules) {
 
 const LINK_RE = /[ \t]*<link\s+rel="stylesheet"\s+href="([^"]+)"\s*\/?>\s*\n?/g;
 const MODULE_SCRIPT_RE = /[ \t]*<script\s+type="module"\s+src="([^"]+)"\s*><\/script>\s*\n?/;
+const FONT_URL_RE = /url\((['"]?)((?:\.\.?\/)[^)'"]+\.woff2)\1\)/g;
+
+/**
+ * Troca cada `url(../fonts/x.woff2)` por um data: URI em base64.
+ *
+ * É o que faz a tipografia viajar dentro do arquivo único. Sem isto o build
+ * abriria com a fonte de sistema, e a promessa de rodar offline valeria só
+ * pro código, não pro visual.
+ *
+ * @param {string} css
+ * @param {string} cssPath caminho do css relativo a src/, pra resolver o url
+ * @returns {Promise<{css:string, bytes:number}>}
+ */
+async function inlineFontUrls(css, cssPath) {
+  const refs = [...css.matchAll(FONT_URL_RE)];
+  if (!refs.length) return { css, bytes: 0 };
+
+  let bytes = 0;
+  let out = css;
+  for (const ref of refs) {
+    const rel = ref[2];
+    const fontId = posix.normalize(posix.join(posix.dirname(cssPath), rel));
+    const abs = join(SRC, fontId);
+    if (!existsSync(abs)) {
+      throw new Error(`fonte não encontrada: ${fontId} (referenciada em ${cssPath})`);
+    }
+    const buf = await readFile(abs);
+    if (buf.subarray(0, 4).toString('latin1') !== 'wOF2') {
+      throw new Error(`${fontId} não é um woff2 válido (assinatura errada)`);
+    }
+    bytes += buf.length;
+    const uri = `url(data:font/woff2;base64,${buf.toString('base64')})`;
+    out = out.replace(ref[0], uri);
+  }
+  return { css: out, bytes };
+}
 
 async function build() {
   let html = await readFile(join(SRC, 'index.html'), 'utf8');
 
+  if (/fonts\.(googleapis|gstatic)\.com/.test(html)) {
+    throw new Error(
+      'src/index.html ainda referencia o Google Fonts.\n' +
+        'As fontes são embutidas por src/styles/fonts.css — remova os <link> remotos,\n' +
+        'senão o arquivo único faz requisição de rede e deixa de funcionar offline.'
+    );
+  }
+
   /* 1. CSS */
   const cssFiles = [];
   html = html.replace(LINK_RE, (match, href) => {
-    if (/^https?:/i.test(href)) return match; // Google Fonts continua remoto
+    if (/^https?:/i.test(href)) return match;
     cssFiles.push(href);
     return '__CSS_SLOT__' + (cssFiles.length - 1) + '__\n';
   });
 
+  let fontBytes = 0;
   for (let i = 0; i < cssFiles.length; i++) {
-    const css = await readFile(join(SRC, cssFiles[i]), 'utf8');
+    const raw = await readFile(join(SRC, cssFiles[i]), 'utf8');
+    const { css, bytes } = await inlineFontUrls(raw, cssFiles[i]);
+    fontBytes += bytes;
     const block = `<style>\n/* ---------- ${cssFiles[i]} ---------- */\n${css.trim()}\n</style>`;
     html = html.replace('__CSS_SLOT__' + i + '__', block);
   }
@@ -468,13 +515,13 @@ async function build() {
       '  Não edite este arquivo: as mudanças se perdem no próximo build.\n-->'
   );
 
-  return { html, modules };
+  return { html, modules, fontBytes };
 }
 
 /* ============ execução ============ */
 
 try {
-  const { html, modules } = await build();
+  const { html, modules, fontBytes } = await build();
   const target = join(DIST, 'index.html');
 
   if (CHECK_ONLY) {
@@ -495,7 +542,8 @@ try {
     await mkdir(DIST, { recursive: true });
     await writeFile(target, html, 'utf8');
     const kb = (Buffer.byteLength(html, 'utf8') / 1024).toFixed(1);
-    console.log(`\n  dist/index.html  ${kb} KB  ·  ${modules.length} módulos`);
+    const fontKb = (fontBytes / 1024).toFixed(1);
+    console.log(`\n  dist/index.html  ${kb} KB  ·  ${modules.length} módulos  ·  ${fontKb} KB de fonte embutida`);
     for (const m of modules) console.log(`    ${m.id}`);
     console.log('');
   }

@@ -1,0 +1,57 @@
+/*
+ * fonts.css — as duas famílias, embutidas.
+ *
+ * No build de arquivo único estes .woff2 viram data: URI em base64 dentro do
+ * próprio HTML. É por isso que a ferramenta abre com duplo clique, sem rede, e
+ * ainda assim com a tipografia certa — nada de cair pra Arial no avião.
+ *
+ * Custo: ~140KB de base64. Em troca, zero requisição externa. Antes o projeto
+ * dependia do Google Fonts, o que contradizia a promessa de rodar offline.
+ *
+ * Ambas são SIL Open Font License 1.1, que permite redistribuição. Os textos
+ * das licenças estão em src/fonts/, ao lado dos arquivos, como a OFL exige.
+ *   Bricolage Grotesque — © 2022 The Bricolage Grotesque Project Authors
+ *   IBM Plex Mono       — © 2017 IBM Corp., Reserved Font Name "Plex"
+ *
+ * Só o subconjunto latin. Cobre português e inglês, incluindo acentuação.
+ */
+
+/* Variável no eixo de peso: um arquivo serve 400 e 700. */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 200 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(../fonts/bricolage-grotesque-var-latin.woff2) format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-mono-400-latin.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-mono-500-latin.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(../fonts/ibm-plex-mono-600-latin.woff2) format('woff2');
+}
+
+/* Pilhas nomeadas, pra não repetir a lista de fallback em cada regra. */
+:root {
+  --font-display: 'Bricolage Grotesque', 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
