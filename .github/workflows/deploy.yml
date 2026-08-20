@@ -57,7 +57,12 @@ jobs:
             exit 1
           }
 
+      # enablement: true liga o Pages sozinho na primeira execução. Sem isso, o
+      # primeiro push num repo novo — ou num fork — falha aqui até alguém abrir
+      # as configurações e ligar na mão.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
