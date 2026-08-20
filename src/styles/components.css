@@ -39,10 +39,10 @@
 }
 
 .head h1 {
-  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 19px;
-  letter-spacing: -0.02em;
+  font-size: 27px;
+  letter-spacing: -0.03em;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -52,10 +52,10 @@
 }
 
 .head p {
-  margin-top: 7px;
+  margin-top: 8px;
   color: var(--dim);
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -112,11 +112,11 @@
 }
 
 .sec > h2 {
-  font-size: 10px;
-  letter-spacing: 0.24em;
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ink);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -125,8 +125,8 @@
 
 .sec > h2::before {
   content: "";
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   background: var(--acid);
   flex: none;
 }
@@ -146,18 +146,18 @@ label.f:last-child {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 9.5px;
-  letter-spacing: 0.18em;
+  font-size: 10.5px;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--dim);
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 }
 
 .lb b {
   color: var(--acid);
-  font-weight: 500;
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
 }
 
 input[type="range"] {
@@ -263,8 +263,8 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .chk span {
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-size: 11px;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
@@ -272,9 +272,9 @@ input[type="color"]::-webkit-color-swatch {
 
 button,
 .btn {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   background: transparent;
   color: var(--ink);
@@ -336,9 +336,9 @@ input[type="file"]:not(.vh) {
 .seg button {
   border: none;
   border-right: 1px solid var(--line);
-  padding: 9px 4px;
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  padding: 10px 4px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
 }
 
 .seg button:last-child {
@@ -380,8 +380,8 @@ input[type="file"]:not(.vh) {
 
 #swEmpty {
   color: var(--dim);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   align-self: center;
 }
@@ -422,15 +422,15 @@ input[type="file"]:not(.vh) {
 }
 
 .st-n {
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
   font-weight: 600;
   line-height: 1.35;
 }
 
 .st-s {
-  font-size: 8.5px;
-  letter-spacing: 0.16em;
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
   color: var(--dim);
   text-transform: uppercase;
 }
@@ -444,8 +444,8 @@ input[type="file"]:not(.vh) {
 /* mensagem de erro do estado, ocupa a linha inteira do card */
 .st-err {
   grid-column: 1 / -1;
-  font-size: 9px;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  letter-spacing: 0.06em;
   line-height: 1.6;
   color: var(--hot);
   text-transform: uppercase;
@@ -493,9 +493,9 @@ input[type="file"]:not(.vh) {
 /* ---------- notas e mensagens ---------- */
 
 .note {
-  font-size: 9.5px;
+  font-size: 10.5px;
   color: var(--dim);
-  line-height: 1.7;
+  line-height: 1.75;
   letter-spacing: 0.04em;
 }
 
