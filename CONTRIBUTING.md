@@ -1,3 +1,5 @@
+**English** · [Português](CONTRIBUTING.pt-BR.md)
+
 # Contributing
 
 Thanks for looking. This is a small project with a strong opinion about what it is, so the constraints are worth reading before you write code.
