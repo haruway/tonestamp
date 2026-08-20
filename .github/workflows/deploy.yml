@@ -45,6 +45,9 @@ jobs:
       - name: Conferir contraste dos temas
         run: node scripts/contrast.mjs
 
+      - name: Conferir a rampa tonal do conjunto padrão
+        run: node scripts/check-ramp.mjs
+
       - name: Gerar o build
         run: node scripts/build.mjs
 

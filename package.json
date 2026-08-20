@@ -10,7 +10,9 @@
     "build": "node scripts/build.mjs",
     "check": "node scripts/build.mjs --check",
     "contrast": "node scripts/contrast.mjs",
-    "serve": "python3 -m http.server 8080 --directory src"
+    "serve": "python3 -m http.server 8080 --directory src",
+    "ramp": "node scripts/check-ramp.mjs",
+    "verify": "node scripts/build.mjs --check && node scripts/contrast.mjs && node scripts/check-ramp.mjs"
   },
   "engines": {
     "node": ">=18"

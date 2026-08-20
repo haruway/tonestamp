@@ -23,9 +23,9 @@ export const TINT_PX = 128;
  */
 export const DEFAULT_SVG = [
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" rx="14" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="13" fill="#fff"/></svg>`,
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 4 96 50 50 96 4 50Z" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 10 90 50 50 90 10 50Z" fill="#fff"/></svg>`,
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="#fff" fill-rule="evenodd" d="M50 12a38 38 0 1 1 0 76 38 38 0 0 1 0-76Zm0 16a22 22 0 1 0 0 44 22 22 0 0 0 0-44Z"/></svg>`,
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="36" y="36" width="28" height="28" fill="#fff"/></svg>`,
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="7" fill="#fff"/></svg>`,
