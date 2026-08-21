@@ -103,15 +103,27 @@ export async function buildSlotImage(slot) {
   if (!slot.svgText) {
     slot.img = null;
     slot.error = null;
+    slot.dirtyImg = false;
     return null;
   }
   if (slot.img && !slot.dirtyImg) return slot.error;
+
+  // Guarda o texto que estamos carregando. Se o slot for trocado enquanto o
+  // await está pendente — trocar de conjunto duas vezes rápido faz isso —
+  // este resultado está obsoleto e não pode ser gravado: gravá-lo deixaria
+  // `dirtyImg` falso com a imagem do conjunto ANTERIOR, e a reconstrução
+  // seguinte pularia o slot achando que já estava em dia.
+  const pending = slot.svgText;
+
   try {
-    slot.img = await svgToImage(slot.svgText);
+    const img = await svgToImage(pending);
+    if (slot.svgText !== pending) return slot.error; // obsoleto, descarta
+    slot.img = img;
     slot.dirtyImg = false;
     slot.error = null;
     return null;
   } catch (err) {
+    if (slot.svgText !== pending) return slot.error;
     slot.img = null;
     slot.dirtyImg = false;
     slot.error = err.message || 'err.svg.malformed';

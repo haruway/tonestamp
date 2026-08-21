@@ -1147,6 +1147,7 @@ select:hover {
       <button id="bSvg" type="button">SVG</button>
     </div>
     <button class="rec" id="bRec" type="button" aria-pressed="false"></button>
+    <p class="note" id="recNote" style="margin-top:10px"></p>
     <p class="note" style="margin-top:12px" data-i18n="note.export"></p>
   </section>
 
@@ -1378,15 +1379,27 @@ async function buildSlotImage(slot) {
   if (!slot.svgText) {
     slot.img = null;
     slot.error = null;
+    slot.dirtyImg = false;
     return null;
   }
   if (slot.img && !slot.dirtyImg) return slot.error;
+
+  // Guarda o texto que estamos carregando. Se o slot for trocado enquanto o
+  // await está pendente — trocar de conjunto duas vezes rápido faz isso —
+  // este resultado está obsoleto e não pode ser gravado: gravá-lo deixaria
+  // `dirtyImg` falso com a imagem do conjunto ANTERIOR, e a reconstrução
+  // seguinte pularia o slot achando que já estava em dia.
+  const pending = slot.svgText;
+
   try {
-    slot.img = await svgToImage(slot.svgText);
+    const img = await svgToImage(pending);
+    if (slot.svgText !== pending) return slot.error; // obsoleto, descarta
+    slot.img = img;
     slot.dirtyImg = false;
     slot.error = null;
     return null;
   } catch (err) {
+    if (slot.svgText !== pending) return slot.error;
     slot.img = null;
     slot.dirtyImg = false;
     slot.error = err.message || 'err.svg.malformed';
@@ -2631,11 +2644,56 @@ function exportSVG() {
   return null;
 }
 
-/* ---------------- WebM ---------------- */
+/* ---------------- gravação de vídeo ---------------- */
 
 /** @type {MediaRecorder|null} */
 let rec = null;
 let chunks = [];
+
+/** Quadros por segundo da captura. */
+const REC_FPS = 30;
+
+/**
+ * Formatos tentados em ordem de preferência.
+ *
+ * MP4 primeiro porque é o que abre em qualquer lugar sem conversor — Premiere,
+ * DaVinci, Instagram, WhatsApp. O Chrome expõe H.264 no MediaRecorder desde a
+ * 126 e o Safari também, então na prática a maioria das pessoas recebe MP4.
+ * WebM fica de reserva pra quem não tiver H.264 disponível.
+ */
+const REC_FORMATS = [
+  { mime: 'video/mp4;codecs=avc1.640028', ext: 'mp4' },
+  { mime: 'video/mp4;codecs=avc1.42E01E', ext: 'mp4' },
+  { mime: 'video/mp4', ext: 'mp4' },
+  { mime: 'video/webm;codecs=vp9', ext: 'webm' },
+  { mime: 'video/webm;codecs=vp8', ext: 'webm' },
+  { mime: 'video/webm', ext: 'webm' },
+];
+
+/** @returns {{mime:string, ext:string}|null} primeiro formato suportado */
+function pickFormat() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  for (const f of REC_FORMATS) {
+    if (MediaRecorder.isTypeSupported(f.mime)) return f;
+  }
+  return null;
+}
+
+/**
+ * Taxa de bits proporcional à área do canvas.
+ *
+ * O conteúdo aqui é de borda dura e cor chapada, que é justamente o que mais
+ * sofre com compressão: bitrate baixo espalha sujeira em volta de cada shape.
+ * 0,25 bit por pixel por quadro segura as bordas limpas; o teto de 40 Mb/s
+ * evita arquivo absurdo em 3000px.
+ *
+ * @param {number} w
+ * @param {number} h
+ */
+function bitrateFor(w, h) {
+  const bits = w * h * REC_FPS * 0.25;
+  return Math.round(Math.min(40e6, Math.max(10e6, bits)));
+}
 
 /** @returns {boolean} se está gravando agora */
 function isRecording() {
@@ -2643,12 +2701,27 @@ function isRecording() {
 }
 
 /**
+ * Descreve o que a gravação vai produzir, pra mostrar na interface antes de
+ * alguém clicar.
+ * @param {number} w
+ * @param {number} h
+ * @returns {{ext:string, mbps:number, fps:number}|null}
+ */
+function recordingInfo(w, h) {
+  const fmt = pickFormat();
+  if (!fmt || !out || !out.captureStream) return null;
+  return { ext: fmt.ext, mbps: Math.round(bitrateFor(w, h) / 1e5) / 10, fps: REC_FPS };
+}
+
+/**
  * Liga ou desliga a gravação do canvas.
  *
- * Safari não implementa MediaRecorder pra canvas.captureStream, então lá isso
- * simplesmente não existe — é limitação do navegador, não da ferramenta.
+ * Antes isto falhava calado: erro do MediaRecorder não era tratado, e se
+ * nenhum dado chegasse ele ainda assim baixava um arquivo de zero byte. Quem
+ * testava via "não funciona" sem nenhuma pista. Agora todo caminho de falha
+ * chega na interface com motivo.
  *
- * @param {(state:'recording'|'stopped'|'unsupported', message?:string) => void} onState
+ * @param {(state:'recording'|'stopped'|'error', detail?:{key:string, vars?:object}) => void} onState
  */
 function toggleRecording(onState) {
   if (isRecording()) {
@@ -2657,35 +2730,60 @@ function toggleRecording(onState) {
   }
   if (!out) return;
 
+  const fmt = pickFormat();
+  if (!fmt || !out.captureStream) {
+    onState('error', { key: 'err.rec.unsupported' });
+    return;
+  }
+
   try {
-    if (typeof MediaRecorder === 'undefined' || !out.captureStream) {
-      onState('unsupported', 'WebM não suportado neste navegador');
+    const stream = out.captureStream(REC_FPS);
+    if (!stream || !stream.getVideoTracks().length) {
+      onState('error', { key: 'err.rec.noStream' });
       return;
     }
-    const stream = out.captureStream(30);
-    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-      ? 'video/webm;codecs=vp9'
-      : 'video/webm';
-    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12000000 });
+
+    rec = new MediaRecorder(stream, {
+      mimeType: fmt.mime,
+      videoBitsPerSecond: bitrateFor(out.width, out.height),
+    });
     chunks = [];
+
     rec.ondataavailable = (e) => {
-      if (e.data.size) chunks.push(e.data);
+      if (e.data && e.data.size) chunks.push(e.data);
     };
-    rec.onstop = () => {
-      const url = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
-      download(url, filename('webm'), true);
-      chunks = [];
+
+    rec.onerror = (e) => {
+      const name = (e && e.error && e.error.name) || '?';
       rec = null;
+      chunks = [];
+      onState('error', { key: 'err.rec.failed', vars: { name } });
+    };
+
+    rec.onstop = () => {
+      rec = null;
+      if (!chunks.length) {
+        // sem nenhum quadro: aconteceu ao gravar com a aba escondida, quando o
+        // loop de render para e o canvas deixa de mudar
+        onState('error', { key: 'err.rec.empty' });
+        return;
+      }
+      const url = URL.createObjectURL(new Blob(chunks, { type: fmt.mime }));
+      download(url, filename(fmt.ext), true);
+      chunks = [];
       onState('stopped');
     };
-    rec.start();
+
+    // timeslice: os dados chegam a cada segundo em vez de tudo no fim, então
+    // uma interrupção não leva a gravação inteira junto
+    rec.start(1000);
     onState('recording');
   } catch (err) {
     rec = null;
-    onState('unsupported', 'WebM não suportado neste navegador');
+    onState('error', { key: 'err.rec.failed', vars: { name: (err && err.name) || '?' } });
   }
 }
-return { exportPNG: exportPNG, exportSVG: exportSVG, init: init, isRecording: isRecording, toggleRecording: toggleRecording };
+return { exportPNG: exportPNG, exportSVG: exportSVG, init: init, isRecording: isRecording, recordingInfo: recordingInfo, toggleRecording: toggleRecording };
 })();
 /* ---------- js/presets.js ---------- */
 __m["js/presets.js"] = (function () {
@@ -2983,9 +3081,14 @@ const DICT = {
     'chk.alpha': 'Fundo transparente (PNG e SVG)',
     'btn.png': 'PNG',
     'btn.svg': 'SVG',
-    'btn.rec': 'Gravar WebM',
+    'btn.rec': 'Gravar vídeo',
     'btn.recStop': 'Parar gravação',
-    'btn.recUnsupported': 'WebM não suportado',
+    'note.rec': 'Grava o preview em {ext}, {fps}fps, ~{mbps} Mb/s. A resolução do vídeo é a "Resolução de saída" acima. Não troque de aba durante a gravação.',
+    'note.recNo': 'Este navegador não grava vídeo do canvas. Use Chrome ou Firefox.',
+    'err.rec.unsupported': 'este navegador não grava vídeo do canvas (MediaRecorder ausente). Use Chrome ou Firefox.',
+    'err.rec.noStream': 'não consegui capturar o canvas.',
+    'err.rec.empty': 'a gravação saiu sem nenhum quadro. Isso acontece se a aba ficar escondida durante a gravação.',
+    'err.rec.failed': 'a gravação falhou ({name}).',
     'note.export': 'Export SVG só sai com as shapes reais quando você sobe seus próprios arquivos.',
 
     'sec.presets': 'Presets',
@@ -3121,9 +3224,14 @@ const DICT = {
     'chk.alpha': 'Transparent background (PNG and SVG)',
     'btn.png': 'PNG',
     'btn.svg': 'SVG',
-    'btn.rec': 'Record WebM',
+    'btn.rec': 'Record video',
     'btn.recStop': 'Stop recording',
-    'btn.recUnsupported': 'WebM not supported',
+    'note.rec': 'Records the preview as {ext}, {fps}fps, ~{mbps} Mbps. Video resolution is the "Output resolution" above. Do not switch tabs while recording.',
+    'note.recNo': 'This browser cannot record the canvas. Use Chrome or Firefox.',
+    'err.rec.unsupported': 'this browser cannot record the canvas (no MediaRecorder). Use Chrome or Firefox.',
+    'err.rec.noStream': 'could not capture the canvas.',
+    'err.rec.empty': 'the recording came out with no frames. This happens if the tab is hidden while recording.',
+    'err.rec.failed': 'recording failed ({name}).',
     'note.export': 'SVG export only carries real shapes once you upload your own files.',
 
     'sec.presets': 'Presets',
@@ -3512,10 +3620,19 @@ async function rebuildSlot(i) {
   paintPreview(i);
 }
 
+/**
+ * Marca a geração da reconstrução em andamento. Trocar de conjunto no meio de
+ * uma reconstrução dispara outra; a antiga precisa desistir, senão as duas
+ * escrevem nas prévias e sobra uma mistura dos dois conjuntos.
+ */
+let rebuildToken = 0;
+
 async function rebuildAll() {
+  const token = ++rebuildToken;
   clearTints();
   for (let i = 0; i < N; i++) {
     await buildSlotImage(slots[i]);
+    if (token !== rebuildToken) return; // outra reconstrução assumiu
     showSlotError(i);
     paintPreview(i);
   }
@@ -3651,6 +3768,7 @@ bindRange('rBri', 'vBri', 'bri');
 bindRange('rCon', 'vCon', 'con');
 bindRange('rGam', 'vGam', 'gam', (v) => (v / 100).toFixed(2), (v) => v / 100);
 bindRange('rRes', 'vRes', 'res', (v) => v + 'px');
+$('rRes').addEventListener('input', () => syncRecNote());
 
 $('cBg').addEventListener('input', (e) => set('bg', e.target.value));
 
@@ -3851,19 +3969,39 @@ $('bPng').addEventListener('click', () => exporter.exportPNG());
 $('bSvg').addEventListener('click', () => exporter.exportSVG());
 
 const bRec = $('bRec');
+
+/** Mostra o que a gravação vai produzir, ou por que não vai. */
+function syncRecNote() {
+  const out = $('out');
+  const info = exporter.recordingInfo(out.width, out.height);
+  const el = $('recNote');
+  el.textContent = info ? t('note.rec', info) : t('note.recNo');
+  el.classList.toggle('warn', !info);
+  bRec.disabled = !info;
+}
+
+function setRecIdle() {
+  bRec.textContent = t('btn.rec');
+  bRec.classList.remove('on');
+  bRec.setAttribute('aria-pressed', 'false');
+  // a resolução volta a ser editável: mudá-la redimensiona o canvas, o que
+  // invalida a stream capturada
+  $('rRes').disabled = false;
+}
+
 bRec.addEventListener('click', () => {
-  exporter.toggleRecording((state, message) => {
+  exporter.toggleRecording((state, detail) => {
     if (state === 'recording') {
       bRec.textContent = t('btn.recStop');
       bRec.classList.add('on');
       bRec.setAttribute('aria-pressed', 'true');
-    } else if (state === 'stopped') {
-      bRec.textContent = t('btn.rec');
-      bRec.classList.remove('on');
-      bRec.setAttribute('aria-pressed', 'false');
-    } else {
-      bRec.textContent = t('btn.recUnsupported');
-      bRec.disabled = true;
+      $('rRes').disabled = true;
+      showSourceMessage('');
+      return;
+    }
+    setRecIdle();
+    if (state === 'error' && detail) {
+      showSourceMessage(t(detail.key, detail.vars), 'bad');
     }
   });
 });
@@ -3986,6 +4124,7 @@ function syncDynamicText() {
   syncSourceTag();
   $('modeNote').textContent = t(MODE_NOTE[S.cmode]);
   if (!exporter.isRecording()) bRec.textContent = t('btn.rec');
+  syncRecNote();
   drawSwatches();
   for (let i = 0; i < N; i++) showSlotError(i);
 }
@@ -4001,7 +4140,9 @@ subscribe((key) => {
 
 // aba escondida: nada de queimar CPU desenhando pra ninguém
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) renderer.stop();
+  // gravando, o loop precisa continuar: se o canvas para de mudar, o
+  // captureStream para de emitir quadros e o arquivo sai vazio
+  if (document.hidden && !exporter.isRecording()) renderer.stop();
   else renderer.start();
 });
 

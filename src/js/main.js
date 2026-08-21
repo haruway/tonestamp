@@ -111,10 +111,19 @@ async function rebuildSlot(i) {
   paintPreview(i);
 }
 
+/**
+ * Marca a geração da reconstrução em andamento. Trocar de conjunto no meio de
+ * uma reconstrução dispara outra; a antiga precisa desistir, senão as duas
+ * escrevem nas prévias e sobra uma mistura dos dois conjuntos.
+ */
+let rebuildToken = 0;
+
 async function rebuildAll() {
+  const token = ++rebuildToken;
   clearTints();
   for (let i = 0; i < N; i++) {
     await buildSlotImage(slots[i]);
+    if (token !== rebuildToken) return; // outra reconstrução assumiu
     showSlotError(i);
     paintPreview(i);
   }
@@ -250,6 +259,7 @@ bindRange('rBri', 'vBri', 'bri');
 bindRange('rCon', 'vCon', 'con');
 bindRange('rGam', 'vGam', 'gam', (v) => (v / 100).toFixed(2), (v) => v / 100);
 bindRange('rRes', 'vRes', 'res', (v) => v + 'px');
+$('rRes').addEventListener('input', () => syncRecNote());
 
 $('cBg').addEventListener('input', (e) => set('bg', e.target.value));
 
@@ -450,19 +460,39 @@ $('bPng').addEventListener('click', () => exporter.exportPNG());
 $('bSvg').addEventListener('click', () => exporter.exportSVG());
 
 const bRec = $('bRec');
+
+/** Mostra o que a gravação vai produzir, ou por que não vai. */
+function syncRecNote() {
+  const out = $('out');
+  const info = exporter.recordingInfo(out.width, out.height);
+  const el = $('recNote');
+  el.textContent = info ? t('note.rec', info) : t('note.recNo');
+  el.classList.toggle('warn', !info);
+  bRec.disabled = !info;
+}
+
+function setRecIdle() {
+  bRec.textContent = t('btn.rec');
+  bRec.classList.remove('on');
+  bRec.setAttribute('aria-pressed', 'false');
+  // a resolução volta a ser editável: mudá-la redimensiona o canvas, o que
+  // invalida a stream capturada
+  $('rRes').disabled = false;
+}
+
 bRec.addEventListener('click', () => {
-  exporter.toggleRecording((state, message) => {
+  exporter.toggleRecording((state, detail) => {
     if (state === 'recording') {
       bRec.textContent = t('btn.recStop');
       bRec.classList.add('on');
       bRec.setAttribute('aria-pressed', 'true');
-    } else if (state === 'stopped') {
-      bRec.textContent = t('btn.rec');
-      bRec.classList.remove('on');
-      bRec.setAttribute('aria-pressed', 'false');
-    } else {
-      bRec.textContent = t('btn.recUnsupported');
-      bRec.disabled = true;
+      $('rRes').disabled = true;
+      showSourceMessage('');
+      return;
+    }
+    setRecIdle();
+    if (state === 'error' && detail) {
+      showSourceMessage(t(detail.key, detail.vars), 'bad');
     }
   });
 });
@@ -585,6 +615,7 @@ function syncDynamicText() {
   syncSourceTag();
   $('modeNote').textContent = t(MODE_NOTE[S.cmode]);
   if (!exporter.isRecording()) bRec.textContent = t('btn.rec');
+  syncRecNote();
   drawSwatches();
   for (let i = 0; i < N; i++) showSlotError(i);
 }
@@ -600,7 +631,9 @@ subscribe((key) => {
 
 // aba escondida: nada de queimar CPU desenhando pra ninguém
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) renderer.stop();
+  // gravando, o loop precisa continuar: se o canvas para de mudar, o
+  // captureStream para de emitir quadros e o arquivo sai vazio
+  if (document.hidden && !exporter.isRecording()) renderer.stop();
   else renderer.start();
 });
 
