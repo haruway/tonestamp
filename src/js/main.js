@@ -259,7 +259,6 @@ bindRange('rBri', 'vBri', 'bri');
 bindRange('rCon', 'vCon', 'con');
 bindRange('rGam', 'vGam', 'gam', (v) => (v / 100).toFixed(2), (v) => v / 100);
 bindRange('rRes', 'vRes', 'res', (v) => v + 'px');
-$('rRes').addEventListener('input', () => syncRecNote());
 
 $('cBg').addEventListener('input', (e) => set('bg', e.target.value));
 
@@ -427,6 +426,8 @@ sources.onChange((info) => {
   showSourceMessage('');
   syncSourceTag();
   updatePerfWarning();
+  // fonte nova, proporção nova: a altura da saída muda junto
+  syncRecNote();
   // Extração automática só PREENCHE os swatches, não aplica nos estados.
   // Aplicar aqui sobrescreveria as sete cores escolhidas na mão toda vez que
   // uma fonte nova entrasse — e no boot deixava tudo cinza. Quem aplica é o
@@ -463,8 +464,10 @@ const bRec = $('bRec');
 
 /** Mostra o que a gravação vai produzir, ou por que não vai. */
 function syncRecNote() {
-  const out = $('out');
-  const info = exporter.recordingInfo(out.width, out.height);
+  // tamanho pretendido, não o atual do canvas: no boot o canvas ainda está no
+  // tamanho do HTML e a nota saía com a taxa de bits errada
+  const { w, h } = renderer.outputSize();
+  const info = exporter.recordingInfo(w, h);
   const el = $('recNote');
   el.textContent = info ? t('note.rec', info) : t('note.recNo');
   el.classList.toggle('warn', !info);
@@ -625,6 +628,9 @@ function syncDynamicText() {
 subscribe((key) => {
   if (key === 'bg' || key === 'fill') repaintAllPreviews();
   if (key === 'cols') updatePerfWarning();
+  // estes três mudam o tamanho da saída, e a nota da gravação anuncia
+  // resolução e taxa de bits
+  if (key === 'res' || key === 'cols' || key === 'square') syncRecNote();
 });
 
 /* ================= ciclo de vida ================= */

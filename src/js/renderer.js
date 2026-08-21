@@ -106,6 +106,28 @@ export function geometry(srcW, srcH) {
 }
 
 /**
+ * Tamanho que a saída vai ter, mesmo antes do primeiro quadro ser desenhado.
+ *
+ * A interface precisa disto pra dizer o que a gravação vai produzir antes de
+ * alguém clicar em gravar. Ler `out.width` direto não serve: no boot o canvas
+ * ainda está no tamanho declarado no HTML, e a nota anunciava a taxa de bits
+ * daquele tamanho até alguém encostar no slider de resolução.
+ *
+ * Sem fonte carregada não há proporção pra derivar, e aí o canvas atual é a
+ * resposta certa — é ele que a gravação vai capturar.
+ *
+ * @returns {{w:number, h:number}}
+ */
+export function outputSize() {
+  const info = getSource();
+  if (!info || !info.w || !info.h) {
+    return { w: out ? out.width : S.res, h: out ? out.height : S.res };
+  }
+  const g = geometry(info.w, info.h);
+  return { w: g.outW, h: g.outH };
+}
+
+/**
  * Índice da faixa tonal de uma luminância já tonemapeada.
  * @param {number} l 0..1
  * @returns {number} 0..N-1
