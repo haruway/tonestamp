@@ -176,15 +176,24 @@ function sample() {
 
 /**
  * Carimba as shapes no canvas de saída.
+ *
  * @param {number} now timestamp do rAF, usado pela rotação
+ * @param {{transparent?: boolean}} [opts] `transparent` limpa o canvas em vez
+ *   de pintar o fundo. Usado só na hora de exportar PNG com alpha — o loop
+ *   normal continua pintando o fundo, senão a prévia ficaria com o xadrez do
+ *   navegador aparecendo por baixo.
  */
-export function paint(now) {
+export function paint(now, opts) {
   const g = lastGeo;
   const cells = lastCells;
   if (!g || !cells || !ctx) return;
 
-  ctx.fillStyle = S.bg;
-  ctx.fillRect(0, 0, out.width, out.height);
+  if (opts && opts.transparent) {
+    ctx.clearRect(0, 0, out.width, out.height);
+  } else {
+    ctx.fillStyle = S.bg;
+    ctx.fillRect(0, 0, out.width, out.height);
+  }
 
   const cs = g.cs;
   const step = S.rot ? Math.floor(now / S.rotInt) : 0;

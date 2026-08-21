@@ -91,7 +91,7 @@ Três modos, mutuamente exclusivos.
 Controles auxiliares:
 
 - **Cores na paleta (2 a 8):** quantas cores o algoritmo vai extrair. Com 3 ou 4 você tem o look de serigrafia. Com 8 fica quase fotográfico.
-- **Extrair da imagem:** roda o k-means e preenche os swatches. Clicar num swatch copia o hex.
+- **Extrair e aplicar:** roda o k-means, preenche os swatches **e** distribui a paleta pelos 7 estados de uma vez. Clicar num swatch copia o hex.
 - **Aplicar nos estados:** joga a paleta extraída nos 7 color pickers, distribuída do claro ao escuro, interpolando quando a paleta tem menos de 7 cores. Esse é o "settings automática por cor".
 - **Extrair ao trocar de fonte:** liga a extração automática toda vez que você carrega uma imagem nova.
 - **Saturação (-100 a +100):** só age nos modos Pixel e Quantizar. Puxa pra +60 ou +80 pra chapar as cores e fugir do aspecto lavado.
@@ -135,11 +135,14 @@ Se a sua imagem está usando só 3 dos 7 estados, o problema é distribuição t
 | Controle | O que faz |
 |---|---|
 | **Resolução de saída** | 600 a 3000px no lado maior. Não muda o grid, muda quantos pixels cada célula ocupa. |
-| **PNG** | Baixa o quadro atual como PNG com fundo sólido. |
-| **SVG** | Baixa **vetor de verdade**. Gera um `<symbol>` por combinação de shape e cor, e um `<use>` por célula. Abre no Illustrator editável. |
+| **Fundo transparente** | Tira o fundo do export de PNG e SVG, deixando as shapes sobre alpha. A prévia continua mostrando a cor de fundo — senão você trabalharia olhando pro xadrez do navegador. |
+| **PNG** | Baixa o quadro atual como PNG. |
+| **SVG** | Baixa **vetor de verdade**. Gera um `<g>` por combinação de shape e cor dentro de `<defs>`, e um `<use>` por célula posicionado por `transform`. Abre no Illustrator editável. |
 | **Gravar WebM** | Grava a área de preview em vídeo, a 30fps. Clica de novo pra parar e baixar. Serve pra vídeo filtrado, pra rotação animada e pra webcam. |
 
-**Sobre peso do SVG.** No modo `Estado` ou `Quantizar` o arquivo é leve, porque existem poucas combinações de shape e cor. No modo `Pixel` pode virar centenas de símbolos e o arquivo fica pesado. Se for exportar vetor, prefira Quantizar.
+**Por que `<g>` e não `<symbol>`.** O Illustrator lê SVG 1.1, trata `<symbol>` com viewBox de forma inconsistente, e ignora o atributo `href` do SVG 2 — ele precisa de `xlink:href`. Exports antigos abriam certo no Preview do macOS e como um retângulo preto vazio no Illustrator, que é exatamente essa combinação. Agora o export escreve os dois atributos e posiciona grupos comuns por `transform`.
+
+**Sobre peso do SVG.** No modo `Estado` ou `Quantizar` o arquivo é leve, porque existem poucas combinações de shape e cor. No modo `Pixel` pode virar centenas de grupos e o arquivo fica pesado. Se for exportar vetor, prefira Quantizar.
 
 ---
 

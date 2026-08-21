@@ -226,6 +226,7 @@ $('kInv').addEventListener('change', (e) => set('invert', e.target.checked));
 $('kScale').addEventListener('change', (e) => set('scale', e.target.checked));
 $('kRot').addEventListener('change', (e) => set('rot', e.target.checked));
 $('kAuto').addEventListener('change', (e) => set('autoPal', e.target.checked));
+$('kAlpha').addEventListener('change', (e) => set('alpha', e.target.checked));
 
 /* ================= cor ================= */
 
@@ -274,10 +275,21 @@ function drawSwatches() {
   });
 }
 
-function doExtract() {
+/**
+ * Extrai a paleta da fonte e já distribui nos 7 estados.
+ *
+ * Extrair sem aplicar não servia pra nada: os swatches enchiam e a imagem
+ * continuava igual, então era preciso lembrar de clicar em "Aplicar nos
+ * estados". Agora extrair é uma ação só.
+ *
+ * @param {boolean} [apply=true] false só preenche os swatches, usado quando
+ *   o usuário mexe no número de cores da paleta sem pedir aplicação
+ */
+function doExtract(apply = true) {
   const info = sources.getSource();
   setPalette(extractPalette(info ? info.el : null, S.palN));
   drawSwatches();
+  if (apply) applyToStates();
 }
 
 function applyToStates() {
@@ -295,6 +307,7 @@ function applyToStates() {
 $('rPal').addEventListener('input', (e) => {
   set('palN', +e.target.value);
   $('vPal').textContent = String(S.palN);
+  // arrastar o slider re-extrai e reaplica, pra o resultado aparecer na hora
   if (getPalette().length) doExtract();
 });
 $('rSat').addEventListener('input', (e) => {
@@ -499,6 +512,7 @@ function syncUI() {
   $('rSat').value = S.sat;
   $('vSat').textContent = String(S.sat);
   $('kAuto').checked = S.autoPal;
+  $('kAlpha').checked = S.alpha;
 
   for (const [key, id] of Object.entries(MODE_BTN)) {
     const on = key === S.cmode;

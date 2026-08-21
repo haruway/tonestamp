@@ -49,6 +49,8 @@ export const S = {
   con: 0,
   gam: 1,
   res: 1440,
+  /** exporta PNG e SVG sem o retângulo de fundo */
+  alpha: false,
   square: false,
   playing: true,
   /** @type {ColorMode} */

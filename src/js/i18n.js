@@ -69,7 +69,7 @@ const DICT = {
     'sw.copy': '{hex} — clique pra copiar',
     'sw.copyAria': 'Copiar {hex}',
     'sw.copied': 'copiado',
-    'btn.extract': 'Extrair da imagem',
+    'btn.extract': 'Extrair e aplicar',
     'btn.apply': 'Aplicar nos estados',
     'chk.autoPal': 'Extrair ao trocar de fonte',
     'lbl.sat': 'Saturação',
@@ -89,6 +89,7 @@ const DICT = {
 
     'sec.export': 'Exportar',
     'lbl.res': 'Resolução de saída',
+    'chk.alpha': 'Fundo transparente (PNG e SVG)',
     'btn.png': 'PNG',
     'btn.svg': 'SVG',
     'btn.rec': 'Gravar WebM',
@@ -204,7 +205,7 @@ const DICT = {
     'sw.copy': '{hex} — click to copy',
     'sw.copyAria': 'Copy {hex}',
     'sw.copied': 'copied',
-    'btn.extract': 'Extract from image',
+    'btn.extract': 'Extract and apply',
     'btn.apply': 'Apply to states',
     'chk.autoPal': 'Extract on source change',
     'lbl.sat': 'Saturation',
@@ -224,6 +225,7 @@ const DICT = {
 
     'sec.export': 'Export',
     'lbl.res': 'Output resolution',
+    'chk.alpha': 'Transparent background (PNG and SVG)',
     'btn.png': 'PNG',
     'btn.svg': 'SVG',
     'btn.rec': 'Record WebM',

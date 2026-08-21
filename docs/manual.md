@@ -91,7 +91,7 @@ Three mutually exclusive modes.
 Supporting controls:
 
 - **Palette colours (2 to 8):** how many colours the algorithm extracts. Three or four gives you the screen-print look. Eight is almost photographic.
-- **Extract from image:** runs k-means and fills the swatches. Clicking a swatch copies its hex.
+- **Extract and apply:** runs k-means, fills the swatches **and** spreads the palette across the seven states in one go. Clicking a swatch copies its hex.
 - **Apply to states:** pushes the extracted palette into the seven colour pickers, spread light to dark, interpolating when the palette has fewer than seven colours. This is the "automatic settings by colour".
 - **Extract on source change:** re-runs extraction every time you load a new image.
 - **Saturation (-100 to +100):** only affects Pixel and Quantize. Push it to +60 or +80 to flatten the colours and escape the washed-out look.
@@ -135,11 +135,14 @@ If your image is only using three of the seven states, that is a tonal distribut
 | Control | What it does |
 |---|---|
 | **Output resolution** | 600 to 3000px on the long edge. Does not change the grid, changes how many pixels each cell occupies. |
-| **PNG** | Downloads the current frame as a PNG with a solid background. |
-| **SVG** | Downloads **real vector**. Emits one `<symbol>` per shape-and-colour pair, and one `<use>` per cell. Opens in Illustrator fully editable. |
+| **Transparent background** | Drops the background from PNG and SVG export, so you get shapes on alpha. The preview keeps showing the background colour — otherwise you would be staring at the browser's checkerboard while you work. |
+| **PNG** | Downloads the current frame as a PNG. |
+| **SVG** | Downloads **real vector**. Emits one `<g>` per shape-and-colour pair inside `<defs>`, and one `<use>` per cell positioned by `transform`. Opens in Illustrator fully editable. |
 | **Record WebM** | Records the preview area to video at 30fps. Click again to stop and download. Use it for filtered video, animated rotation and webcam. |
 
-**About SVG weight.** In `State` or `Quantize` mode the file is light, because there are few shape-colour combinations. In `Pixel` mode it can become hundreds of symbols and the file gets heavy. If you are exporting vector, prefer Quantize.
+**Why `<g>` and not `<symbol>`.** Illustrator reads SVG 1.1 and handles `<symbol>` with a viewBox inconsistently, and it ignores the SVG 2 `href` attribute entirely — it needs `xlink:href`. Earlier exports opened correctly in macOS Preview and as an empty black rectangle in Illustrator, which is exactly that combination. The export now writes both attributes and positions plain groups with `transform`.
+
+**About SVG weight.** In `State` or `Quantize` mode the file is light, because there are few shape-colour combinations. In `Pixel` mode it can become hundreds of groups and the file gets heavy. If you are exporting vector, prefer Quantize.
 
 ---
 

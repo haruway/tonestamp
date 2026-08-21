@@ -1108,6 +1108,7 @@ input[type="file"]:not(.vh) {
       <span class="lb"><span data-i18n="lbl.res"></span> <b id="vRes">1440px</b></span>
       <input type="range" id="rRes" min="600" max="3000" step="60" value="1440">
     </label>
+    <label class="chk" style="margin-bottom:12px"><input type="checkbox" id="kAlpha"><span data-i18n="chk.alpha"></span></label>
     <div class="row" style="margin-bottom:8px">
       <button class="pri" id="bPng" type="button">PNG</button>
       <button id="bSvg" type="button">SVG</button>
@@ -1391,6 +1392,8 @@ const S = {
   con: 0,
   gam: 1,
   res: 1440,
+  /** exporta PNG e SVG sem o retângulo de fundo */
+  alpha: false,
   square: false,
   playing: true,
   /** @type {ColorMode} */
@@ -2189,15 +2192,24 @@ function sample() {
 
 /**
  * Carimba as shapes no canvas de saída.
+ *
  * @param {number} now timestamp do rAF, usado pela rotação
+ * @param {{transparent?: boolean}} [opts] `transparent` limpa o canvas em vez
+ *   de pintar o fundo. Usado só na hora de exportar PNG com alpha — o loop
+ *   normal continua pintando o fundo, senão a prévia ficaria com o xadrez do
+ *   navegador aparecendo por baixo.
  */
-function paint(now) {
+function paint(now, opts) {
   const g = lastGeo;
   const cells = lastCells;
   if (!g || !cells || !ctx) return;
 
-  ctx.fillStyle = S.bg;
-  ctx.fillRect(0, 0, out.width, out.height);
+  if (opts && opts.transparent) {
+    ctx.clearRect(0, 0, out.width, out.height);
+  } else {
+    ctx.fillStyle = S.bg;
+    ctx.fillRect(0, 0, out.width, out.height);
+  }
 
   const cs = g.cs;
   const step = S.rot ? Math.floor(now / S.rotInt) : 0;
@@ -2301,13 +2313,13 @@ __m["js/export.js"] = (function () {
 const { S, slots, N, getPalette } = __m["js/state.js"];
 const { parseSvg } = __m["js/shapes.js"];
 const { cellColor } = __m["js/palette.js"];
-const { tonemap, getFrame } = __m["js/renderer.js"];
+const { tonemap, getFrame, paint } = __m["js/renderer.js"];
 /**
  * export.js — saída: PNG, SVG vetorial e gravação WebM.
  *
  * O export de SVG não é um traçado do canvas: ele reconstrói a composição
- * célula por célula usando as shapes originais, uma `<symbol>` por combinação
- * de shape e cor e um `<use>` por célula. É por isso que abre editável no
+ * célula por célula usando as shapes originais, um `<g>` por combinação de
+ * shape e cor, e um `<use>` por célula. É por isso que abre editável no
  * Illustrator.
  */
 
@@ -2346,10 +2358,19 @@ function download(href, name, isObjectUrl) {
 
 /* ---------------- PNG ---------------- */
 
-/** Baixa o quadro atual do canvas como PNG. */
+/**
+ * Baixa o quadro atual do canvas como PNG.
+ *
+ * Com `S.alpha` ligado, repinta o quadro sem o fundo logo antes de ler os
+ * pixels. `toDataURL` é síncrono, então nada desenha entre uma coisa e outra;
+ * o próximo quadro do loop já devolve o fundo à prévia.
+ */
 function exportPNG() {
   if (!out) return;
-  download(out.toDataURL('image/png'), filename('png'), false);
+  if (S.alpha) paint(performance.now(), { transparent: true });
+  const data = out.toDataURL('image/png');
+  if (S.alpha) paint(performance.now());
+  download(data, filename('png'), false);
 }
 
 /* ---------------- SVG ---------------- */
@@ -2385,26 +2406,42 @@ function exportSVG() {
   const symId = new Map();
 
   /**
-   * Devolve o id do `<symbol>` para (shape, cor), criando na primeira vez.
-   * No modo Estado ou Quantizar isso gera pouquíssimos símbolos. No modo
+   * Devolve o id do `<g>` para (shape, cor), criando na primeira vez.
+   * No modo Estado ou Quantizar isso gera pouquíssimos grupos. No modo
    * Pixel pode gerar centenas — está documentado no manual.
+   *
+   * Usa `<g>` e não `<symbol>` de propósito. O Illustrator lê SVG 1.1 e
+   * trata `<symbol>` com viewBox de forma inconsistente; um `<g>` posicionado
+   * por `transform` não depende de nenhum mapeamento de viewport.
+   *
+   * @returns {{id:string, vbW:number, vbH:number}|null}
    */
-  function symbolFor(i, hex) {
+  function groupFor(i, hex) {
     const key = i + '|' + hex;
     const hit = symId.get(key);
     if (hit) return hit;
     const pr = parsed[i];
     if (!pr) return null;
+
     const clone = pr.el.cloneNode(true);
     if (S.fill) {
       clone
         .querySelectorAll('path,circle,rect,polygon,ellipse,polyline,g')
         .forEach((n) => n.setAttribute('fill', hex));
     }
-    const id = 's' + symId.size;
-    symId.set(key, id);
-    defs.push(`<symbol id="${id}" viewBox="${pr.viewBox}">${clone.innerHTML}</symbol>`);
-    return id;
+
+    // normaliza o viewBox pra origem, pra o transform do <use> ser só
+    // posição e escala
+    const [minX, minY, vbW, vbH] = pr.viewBox.trim().split(/[\s,]+/).map(Number);
+    const inner =
+      minX || minY
+        ? `<g transform="translate(${-minX} ${-minY})">${clone.innerHTML}</g>`
+        : clone.innerHTML;
+
+    const entry = { id: 's' + symId.size, vbW: vbW || 100, vbH: vbH || 100 };
+    symId.set(key, entry);
+    defs.push(`<g id="${entry.id}">${inner}</g>`);
+    return entry;
   }
 
   const palette = getPalette();
@@ -2422,8 +2459,8 @@ function exportSVG() {
       if (S.invert) idx = N - 1 - idx;
 
       if (!parsed[idx]) continue;
-      const id = symbolFor(idx, cellColor(S.cmode, slots[idx].color, rgb, ci, palette, S.sat));
-      if (!id) continue;
+      const g0 = groupFor(idx, cellColor(S.cmode, slots[idx].color, rgb, ci, palette, S.sat));
+      if (!g0) continue;
 
       let size = cs;
       if (S.scale) {
@@ -2436,17 +2473,28 @@ function exportSVG() {
 
       const px = (x * cs + cs / 2 - size / 2).toFixed(2);
       const py = (y * cs + cs / 2 - size / 2).toFixed(2);
+      const kx = (size / g0.vbW).toFixed(5);
+      const ky = (size / g0.vbH).toFixed(5);
+
+      // xlink:href primeiro, href depois: o Illustrator só entende o
+      // primeiro (SVG 1.1), navegador moderno entende os dois. Era essa a
+      // causa do arquivo abrir vazio no Illustrator e certo no Preview.
       body.push(
-        `<use href="#${id}" x="${px}" y="${py}" width="${size.toFixed(2)}" height="${size.toFixed(2)}"/>`
+        `<use xlink:href="#${g0.id}" href="#${g0.id}" ` +
+          `transform="translate(${px} ${py}) scale(${kx} ${ky})"/>`
       );
     }
   }
 
+  const background = S.alpha ? '' : `<rect width="100%" height="100%" fill="${S.bg}"/>`;
+
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${out.width}" height="${out.height}" ` +
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+    `version="1.1" width="${out.width}" height="${out.height}" ` +
     `viewBox="0 0 ${out.width} ${out.height}">` +
     `<defs>${defs.join('')}</defs>` +
-    `<rect width="100%" height="100%" fill="${S.bg}"/>` +
+    background +
     body.join('') +
     `</svg>`;
 
@@ -2782,7 +2830,7 @@ const DICT = {
     'sw.copy': '{hex} — clique pra copiar',
     'sw.copyAria': 'Copiar {hex}',
     'sw.copied': 'copiado',
-    'btn.extract': 'Extrair da imagem',
+    'btn.extract': 'Extrair e aplicar',
     'btn.apply': 'Aplicar nos estados',
     'chk.autoPal': 'Extrair ao trocar de fonte',
     'lbl.sat': 'Saturação',
@@ -2802,6 +2850,7 @@ const DICT = {
 
     'sec.export': 'Exportar',
     'lbl.res': 'Resolução de saída',
+    'chk.alpha': 'Fundo transparente (PNG e SVG)',
     'btn.png': 'PNG',
     'btn.svg': 'SVG',
     'btn.rec': 'Gravar WebM',
@@ -2917,7 +2966,7 @@ const DICT = {
     'sw.copy': '{hex} — click to copy',
     'sw.copyAria': 'Copy {hex}',
     'sw.copied': 'copied',
-    'btn.extract': 'Extract from image',
+    'btn.extract': 'Extract and apply',
     'btn.apply': 'Apply to states',
     'chk.autoPal': 'Extract on source change',
     'lbl.sat': 'Saturation',
@@ -2937,6 +2986,7 @@ const DICT = {
 
     'sec.export': 'Export',
     'lbl.res': 'Output resolution',
+    'chk.alpha': 'Transparent background (PNG and SVG)',
     'btn.png': 'PNG',
     'btn.svg': 'SVG',
     'btn.rec': 'Record WebM',
@@ -3444,6 +3494,7 @@ $('kInv').addEventListener('change', (e) => set('invert', e.target.checked));
 $('kScale').addEventListener('change', (e) => set('scale', e.target.checked));
 $('kRot').addEventListener('change', (e) => set('rot', e.target.checked));
 $('kAuto').addEventListener('change', (e) => set('autoPal', e.target.checked));
+$('kAlpha').addEventListener('change', (e) => set('alpha', e.target.checked));
 
 /* ================= cor ================= */
 
@@ -3492,10 +3543,21 @@ function drawSwatches() {
   });
 }
 
-function doExtract() {
+/**
+ * Extrai a paleta da fonte e já distribui nos 7 estados.
+ *
+ * Extrair sem aplicar não servia pra nada: os swatches enchiam e a imagem
+ * continuava igual, então era preciso lembrar de clicar em "Aplicar nos
+ * estados". Agora extrair é uma ação só.
+ *
+ * @param {boolean} [apply=true] false só preenche os swatches, usado quando
+ *   o usuário mexe no número de cores da paleta sem pedir aplicação
+ */
+function doExtract(apply = true) {
   const info = sources.getSource();
   setPalette(extractPalette(info ? info.el : null, S.palN));
   drawSwatches();
+  if (apply) applyToStates();
 }
 
 function applyToStates() {
@@ -3513,6 +3575,7 @@ function applyToStates() {
 $('rPal').addEventListener('input', (e) => {
   set('palN', +e.target.value);
   $('vPal').textContent = String(S.palN);
+  // arrastar o slider re-extrai e reaplica, pra o resultado aparecer na hora
   if (getPalette().length) doExtract();
 });
 $('rSat').addEventListener('input', (e) => {
@@ -3717,6 +3780,7 @@ function syncUI() {
   $('rSat').value = S.sat;
   $('vSat').textContent = String(S.sat);
   $('kAuto').checked = S.autoPal;
+  $('kAlpha').checked = S.alpha;
 
   for (const [key, id] of Object.entries(MODE_BTN)) {
     const on = key === S.cmode;

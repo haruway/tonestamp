@@ -2,15 +2,15 @@
  * export.js — saída: PNG, SVG vetorial e gravação WebM.
  *
  * O export de SVG não é um traçado do canvas: ele reconstrói a composição
- * célula por célula usando as shapes originais, uma `<symbol>` por combinação
- * de shape e cor e um `<use>` por célula. É por isso que abre editável no
+ * célula por célula usando as shapes originais, um `<g>` por combinação de
+ * shape e cor, e um `<use>` por célula. É por isso que abre editável no
  * Illustrator.
  */
 
 import { S, slots, N, getPalette } from './state.js';
 import { parseSvg } from './shapes.js';
 import { cellColor } from './palette.js';
-import { tonemap, getFrame } from './renderer.js';
+import { tonemap, getFrame, paint } from './renderer.js';
 
 /** @type {HTMLCanvasElement|null} */
 let out = null;
@@ -42,10 +42,19 @@ function download(href, name, isObjectUrl) {
 
 /* ---------------- PNG ---------------- */
 
-/** Baixa o quadro atual do canvas como PNG. */
+/**
+ * Baixa o quadro atual do canvas como PNG.
+ *
+ * Com `S.alpha` ligado, repinta o quadro sem o fundo logo antes de ler os
+ * pixels. `toDataURL` é síncrono, então nada desenha entre uma coisa e outra;
+ * o próximo quadro do loop já devolve o fundo à prévia.
+ */
 export function exportPNG() {
   if (!out) return;
-  download(out.toDataURL('image/png'), filename('png'), false);
+  if (S.alpha) paint(performance.now(), { transparent: true });
+  const data = out.toDataURL('image/png');
+  if (S.alpha) paint(performance.now());
+  download(data, filename('png'), false);
 }
 
 /* ---------------- SVG ---------------- */
@@ -81,26 +90,42 @@ export function exportSVG() {
   const symId = new Map();
 
   /**
-   * Devolve o id do `<symbol>` para (shape, cor), criando na primeira vez.
-   * No modo Estado ou Quantizar isso gera pouquíssimos símbolos. No modo
+   * Devolve o id do `<g>` para (shape, cor), criando na primeira vez.
+   * No modo Estado ou Quantizar isso gera pouquíssimos grupos. No modo
    * Pixel pode gerar centenas — está documentado no manual.
+   *
+   * Usa `<g>` e não `<symbol>` de propósito. O Illustrator lê SVG 1.1 e
+   * trata `<symbol>` com viewBox de forma inconsistente; um `<g>` posicionado
+   * por `transform` não depende de nenhum mapeamento de viewport.
+   *
+   * @returns {{id:string, vbW:number, vbH:number}|null}
    */
-  function symbolFor(i, hex) {
+  function groupFor(i, hex) {
     const key = i + '|' + hex;
     const hit = symId.get(key);
     if (hit) return hit;
     const pr = parsed[i];
     if (!pr) return null;
+
     const clone = pr.el.cloneNode(true);
     if (S.fill) {
       clone
         .querySelectorAll('path,circle,rect,polygon,ellipse,polyline,g')
         .forEach((n) => n.setAttribute('fill', hex));
     }
-    const id = 's' + symId.size;
-    symId.set(key, id);
-    defs.push(`<symbol id="${id}" viewBox="${pr.viewBox}">${clone.innerHTML}</symbol>`);
-    return id;
+
+    // normaliza o viewBox pra origem, pra o transform do <use> ser só
+    // posição e escala
+    const [minX, minY, vbW, vbH] = pr.viewBox.trim().split(/[\s,]+/).map(Number);
+    const inner =
+      minX || minY
+        ? `<g transform="translate(${-minX} ${-minY})">${clone.innerHTML}</g>`
+        : clone.innerHTML;
+
+    const entry = { id: 's' + symId.size, vbW: vbW || 100, vbH: vbH || 100 };
+    symId.set(key, entry);
+    defs.push(`<g id="${entry.id}">${inner}</g>`);
+    return entry;
   }
 
   const palette = getPalette();
@@ -118,8 +143,8 @@ export function exportSVG() {
       if (S.invert) idx = N - 1 - idx;
 
       if (!parsed[idx]) continue;
-      const id = symbolFor(idx, cellColor(S.cmode, slots[idx].color, rgb, ci, palette, S.sat));
-      if (!id) continue;
+      const g0 = groupFor(idx, cellColor(S.cmode, slots[idx].color, rgb, ci, palette, S.sat));
+      if (!g0) continue;
 
       let size = cs;
       if (S.scale) {
@@ -132,17 +157,28 @@ export function exportSVG() {
 
       const px = (x * cs + cs / 2 - size / 2).toFixed(2);
       const py = (y * cs + cs / 2 - size / 2).toFixed(2);
+      const kx = (size / g0.vbW).toFixed(5);
+      const ky = (size / g0.vbH).toFixed(5);
+
+      // xlink:href primeiro, href depois: o Illustrator só entende o
+      // primeiro (SVG 1.1), navegador moderno entende os dois. Era essa a
+      // causa do arquivo abrir vazio no Illustrator e certo no Preview.
       body.push(
-        `<use href="#${id}" x="${px}" y="${py}" width="${size.toFixed(2)}" height="${size.toFixed(2)}"/>`
+        `<use xlink:href="#${g0.id}" href="#${g0.id}" ` +
+          `transform="translate(${px} ${py}) scale(${kx} ${ky})"/>`
       );
     }
   }
 
+  const background = S.alpha ? '' : `<rect width="100%" height="100%" fill="${S.bg}"/>`;
+
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${out.width}" height="${out.height}" ` +
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+    `version="1.1" width="${out.width}" height="${out.height}" ` +
     `viewBox="0 0 ${out.width} ${out.height}">` +
     `<defs>${defs.join('')}</defs>` +
-    `<rect width="100%" height="100%" fill="${S.bg}"/>` +
+    background +
     body.join('') +
     `</svg>`;
 
