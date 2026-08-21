@@ -14,6 +14,7 @@ inside the file.
 | [`retrato-editorial.json`](retrato-editorial.json) | 90 | State | Scale by size: one circle at seven radii (46→5). Black and white, gamma 0.85, scale on. Classic newspaper halftone. Start here on a new photo. |
 | [`poster-serigrafia.json`](poster-serigrafia.json) | 55 | Quantize | Seven solid shapes with no holes, 3-colour palette, saturation +70, max size 92% to open the grid. The flat screen-print look. |
 | [`lettering.json`](lettering.json) | 34 | State | Scale by complexity: from three nested rings down to a dot. State 7 off, 90° rotation every 1600ms. For titles and large type. |
+| [`blocos.json`](blocos.json) | 100 | State | Solid squares that touch at the highlight end and shrink into the shadows. Black on white, contrast +20, output 2040px. The hard printed-grid look. Uses the [`blocks`](../shapes/blocks/) set. |
 | [`textura-fundo.json`](textura-fundo.json) | 160 | State | A single shape across all seven states, only the colour changes. Fine noise in desaturated warm tones, to sit behind type. |
 
 Presets **do not store the image**. Load your source first, then the preset —

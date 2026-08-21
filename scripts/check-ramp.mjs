@@ -1,5 +1,5 @@
 /**
- * check-ramp.mjs — confere que o conjunto padrão de shapes é uma rampa
+ * check-ramp.mjs — confere que todo conjunto de shapes em shapes/ é uma rampa
  * monotônica de área preenchida.
  *
  * Essa é a regra número um do projeto: se o estado 4 depositar mais tinta que
@@ -25,7 +25,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SHAPES_DIR = join(ROOT, 'shapes', 'default');
+const SHAPES_ROOT = join(ROOT, 'shapes');
+const SHAPES_DIR = join(SHAPES_ROOT, 'default');
 const SHAPES_JS = join(ROOT, 'src', 'js', 'shapes.js');
 
 /** Segmentos por arco no achatamento. */
@@ -315,6 +316,47 @@ if (embedded.length !== 7) {
       console.log(`        arquivo: ${fileSvg.slice(0, 90)}`);
       console.log(`        código:  ${codeSvg.slice(0, 90)}`);
     }
+  }
+}
+
+/* qualquer outro conjunto em shapes/ também precisa ser monotônico */
+const otherSets = (await readdir(SHAPES_ROOT, { withFileTypes: true }))
+  .filter((e) => e.isDirectory() && e.name !== 'default')
+  .map((e) => e.name)
+  .sort();
+
+for (const setName of otherSets) {
+  const dir = join(SHAPES_ROOT, setName);
+  const svgFiles = (await readdir(dir)).filter((f) => f.endsWith('.svg')).sort();
+  if (!svgFiles.length) continue;
+
+  console.log(`\n  conjunto "${setName}"`);
+  console.log('  ' + '-'.repeat(68));
+
+  if (svgFiles.length !== 7) {
+    console.error(`  XX  ${setName}/ tem ${svgFiles.length} svg, precisa ter 7`);
+    failures++;
+    continue;
+  }
+
+  let prev = Infinity;
+  for (let i = 0; i < svgFiles.length; i++) {
+    const svg = (await readFile(join(dir, svgFiles[i]), 'utf8')).trim();
+    let pct;
+    try {
+      pct = filledFraction(svg) * 100;
+    } catch (err) {
+      console.error(`  XX  ${svgFiles[i]} — ${err.message}`);
+      failures++;
+      continue;
+    }
+    const drops = pct < prev;
+    if (!drops) failures++;
+    const delta = prev === Infinity ? '' : (pct - prev).toFixed(1).padStart(7);
+    console.log(
+      `  ${drops ? 'ok' : 'XX'}  ${String(i + 1)}  ${svgFiles[i].padEnd(40)} ${pct.toFixed(1).padStart(5)}%  ${delta}`
+    );
+    prev = pct;
   }
 }
 

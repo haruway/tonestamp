@@ -27,6 +27,27 @@ Se você mudar um destes arquivos, **atualize também a constante `DEFAULT_SVG`*
 em `src/js/shapes.js` e rode `node scripts/build.mjs`. O que a ferramenta carrega
 é a constante, não o arquivo.
 
+## `blocks/`
+
+Quadrados que preenchem a célula inteira no highlight e vão encolhendo em
+direção à sombra. Como o estado 1 é um quadrado de 100×100 cheio, as células
+vizinhas se encostam e fecham áreas sólidas — é isso que dá o aspecto duro, de
+grid impresso, em vez de pontilhado.
+
+| Arquivo | Estado | Área preenchida |
+|---|---|---|
+| `01-highlights-bloco-cheio.svg` | 1 · Highlights | 100,0% |
+| `02-light-mid-bloco-88.svg` | 2 · Light mid | 77,4% |
+| `03-mid-high-bloco-74.svg` | 3 · Mid high | 54,8% |
+| `04-midtones-bloco-58.svg` | 4 · Midtones | 33,6% |
+| `05-mid-low-bloco-42.svg` | 5 · Mid low | 17,6% |
+| `06-dark-mid-bloco-26.svg` | 6 · Dark mid | 6,8% |
+| `07-shadows-bloco-12.svg` | 7 · Shadows | 1,4% |
+
+Os degraus aqui são muito mais bem distribuídos que no `default/`, então os
+meios-tons ficam mais suaves. Carregue num clique com o preset
+[`blocos.json`](../examples/blocos.json).
+
 ## Desenhando o seu próprio conjunto
 
 A explicação longa — peso óptico, por que a rampa tem que ser monotônica, quais

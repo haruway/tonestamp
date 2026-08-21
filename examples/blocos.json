@@ -1,0 +1,72 @@
+{
+  "format": "tonestamp-preset",
+  "version": 1,
+  "created": "2026-08-20T00:00:00.000Z",
+  "params": {
+    "cols": 100,
+    "bg": "#ffffff",
+    "fill": true,
+    "invert": false,
+    "scale": false,
+    "minS": 30,
+    "maxS": 100,
+    "rot": false,
+    "rotInt": 400,
+    "bri": 0,
+    "con": 20,
+    "gam": 1,
+    "res": 2040,
+    "square": false,
+    "playing": true,
+    "alpha": false,
+    "cmode": "state",
+    "palN": 5,
+    "sat": 0,
+    "autoPal": false
+  },
+  "states": [
+    {
+      "on": true,
+      "color": "#000000",
+      "name": "01-highlights-bloco-cheio.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"0\" y=\"0\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#000000",
+      "name": "02-light-mid-bloco-88.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"6\" y=\"6\" width=\"88\" height=\"88\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#000000",
+      "name": "03-mid-high-bloco-74.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"13\" y=\"13\" width=\"74\" height=\"74\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#000000",
+      "name": "04-midtones-bloco-58.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"21\" y=\"21\" width=\"58\" height=\"58\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#000000",
+      "name": "05-mid-low-bloco-42.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"29\" y=\"29\" width=\"42\" height=\"42\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#000000",
+      "name": "06-dark-mid-bloco-26.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"37\" y=\"37\" width=\"26\" height=\"26\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "on": true,
+      "color": "#000000",
+      "name": "07-shadows-bloco-12.svg",
+      "svgText": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"44\" y=\"44\" width=\"12\" height=\"12\" fill=\"#fff\"/></svg>"
+    }
+  ],
+  "palette": []
+}

@@ -26,6 +26,27 @@ checks that these files still match the `DEFAULT_SVG` constant in the code.
 If you change one of these files, **update the constant too** and run
 `node scripts/build.mjs`. What the tool loads is the constant, not the file.
 
+## `blocks/`
+
+Squares that fill the whole cell at the highlight end and shrink toward the
+shadows. Because state 1 is a full 100×100 square, neighbouring cells touch and
+close into solid black areas — that is what gives the hard, printed, pixel-grid
+look rather than a dotted one.
+
+| File | State | Filled area |
+|---|---|---|
+| `01-highlights-bloco-cheio.svg` | 1 · Highlights | 100.0% |
+| `02-light-mid-bloco-88.svg` | 2 · Light mid | 77.4% |
+| `03-mid-high-bloco-74.svg` | 3 · Mid high | 54.8% |
+| `04-midtones-bloco-58.svg` | 4 · Midtones | 33.6% |
+| `05-mid-low-bloco-42.svg` | 5 · Mid low | 17.6% |
+| `06-dark-mid-bloco-26.svg` | 6 · Dark mid | 6.8% |
+| `07-shadows-bloco-12.svg` | 7 · Shadows | 1.4% |
+
+The steps here are far more evenly spaced than in `default/`, so midtones read
+smoother. Load it in one click with the [`blocos.json`](../examples/blocos.json)
+preset.
+
 ## Drawing your own set
 
 The long version — optical weight, why the ramp has to be monotonic, which
