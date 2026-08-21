@@ -1,7 +1,35 @@
 {
   "name": "tonestamp",
   "version": "1.0.0",
-  "description": "Tonal halftone that maps image luminance onto seven custom SVG shapes. Single HTML file, no install.",
+  "description": "Tonal halftone that maps image luminance onto seven custom SVG shapes. One HTML file, no install, no server, runs offline.",
+  "keywords": [
+    "halftone",
+    "dithering",
+    "ordered-dithering",
+    "bayer",
+    "svg",
+    "vector-export",
+    "generative-art",
+    "creative-coding",
+    "graphic-design",
+    "poster",
+    "image-processing",
+    "canvas",
+    "vanilla-js",
+    "zero-dependencies",
+    "offline",
+    "single-file",
+    "riso",
+    "screenprint"
+  ],
+  "homepage": "https://haruway.github.io/tonestamp/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haruway/tonestamp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/haruway/tonestamp/issues"
+  },
   "license": "MIT",
   "author": "Danilo Mariani",
   "type": "module",
