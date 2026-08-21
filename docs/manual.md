@@ -63,6 +63,23 @@ Seven rows, highlight to shadow:
 | 6 · Dark mid | | |
 | 7 · Shadows (100%) | darkest | the lightest shape / least area, or nothing |
 
+**Shape set** at the top of the section loads one of the four bundled sets in
+one click:
+
+| Set | Strategy | Ramp |
+|---|---|---|
+| **Default · density** | seven different shapes | 66.5 → 1.5% |
+| **Dots · by size** | one circle, seven radii | 66.5 → 0.8% |
+| **Blocks · squares** | squares, full cell at the highlight end | 100 → 1.4% |
+| **Complexity** | nested rings down to a dot | 38.9 → 2.0% |
+
+The sets are embedded in the file, not fetched — the tool opens from `file://`
+with no server, so there is nothing to fetch from. They are generated from the
+folders in [`shapes/`](../shapes/), which stay there as `.svg` files you can
+open in Illustrator.
+
+**Default shapes** reloads whichever set is currently selected.
+
 Each row has three controls:
 
 - **Colour swatch** on the left: the colour for that band. Only has an effect in the `State` colour mode.

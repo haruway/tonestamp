@@ -949,6 +949,35 @@ input[type="file"]:not(.vh) {
 .icon-btn-text:hover {
   color: var(--ink);
 }
+
+/* ---------- seletor de conjunto de shapes ---------- */
+
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  padding: 9px 28px 9px 10px;
+  cursor: pointer;
+  font-weight: 500;
+  /* seta desenhada em gradiente, pra não depender de asset externo */
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 15px) calc(50% + 1px), calc(100% - 10px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+select:hover {
+  border-color: var(--ink);
+}
 </style>
 <!--
   Boot do tema antes da primeira pintura, pra não piscar o tema errado.
@@ -1036,6 +1065,10 @@ input[type="file"]:not(.vh) {
 
   <section class="sec" aria-labelledby="h-states">
     <h2 id="h-states" data-i18n="sec.states"></h2>
+    <label class="f" for="selSet" style="margin-bottom:14px">
+      <span class="lb" data-i18n="lbl.shapeSet"></span>
+      <select id="selSet"></select>
+    </label>
     <div id="states"></div>
     <div class="row" style="margin-top:10px">
       <button id="bAllWhite" type="button" data-i18n="btn.allWhite"></button>
@@ -1139,8 +1172,94 @@ input[type="file"]:not(.vh) {
 'use strict';
 /* bundle gerado por scripts/build.mjs — edite src/, nunca este arquivo */
 var __m = {};
+/* ---------- js/shape-sets.js ---------- */
+__m["js/shape-sets.js"] = (function () {
+/**
+ * shape-sets.js — ARQUIVO GERADO. Não edite à mão.
+ *
+ * Gerado por scripts/gen-shape-sets.mjs a partir das pastas de shapes/.
+ * Pra mudar uma shape, edite o .svg na pasta e rode:
+ *
+ *   node scripts/gen-shape-sets.mjs
+ *
+ * Os SVGs ficam embutidos porque a ferramenta roda de file://, sem servidor,
+ * e não pode buscar arquivo nenhum em disco.
+ *
+ * @typedef {object} ShapeSet
+ * @property {string} id
+ * @property {{pt:string, en:string}} labels
+ * @property {string[]} svgs sete, do highlight à sombra
+ */
+
+/** @type {ShapeSet[]} */
+const SHAPE_SETS = [
+  {
+    id: "default",
+    labels: { pt: "Padrão · densidade", en: "Default · density" },
+    svgs: [
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"46\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"10\" y=\"10\" width=\"80\" height=\"80\" rx=\"13\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"34\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 10 90 50 50 90 10 50Z\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 12a38 38 0 1 1 0 76 38 38 0 0 1 0-76Zm0 16a22 22 0 1 0 0 44 22 22 0 0 0 0-44Z\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"36\" y=\"36\" width=\"28\" height=\"28\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"7\" fill=\"#fff\"/></svg>",
+    ],
+  },
+  {
+    id: "dots",
+    labels: { pt: "Pontos · por tamanho", en: "Dots · by size" },
+    svgs: [
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"46\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"38\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"30\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"22\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"16\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"10\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"#fff\"/></svg>",
+    ],
+  },
+  {
+    id: "blocks",
+    labels: { pt: "Blocos · quadrados", en: "Blocks · squares" },
+    svgs: [
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"6\" y=\"6\" width=\"88\" height=\"88\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"13\" y=\"13\" width=\"74\" height=\"74\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"21\" y=\"21\" width=\"58\" height=\"58\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"29\" y=\"29\" width=\"42\" height=\"42\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"37\" y=\"37\" width=\"26\" height=\"26\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"44\" y=\"44\" width=\"12\" height=\"12\" fill=\"#fff\"/></svg>",
+    ],
+  },
+  {
+    id: "complexity",
+    labels: { pt: "Complexidade", en: "Complexity" },
+    svgs: [
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 8a38 38 0 1 0 0 76 38 38 0 0 0 0-76ZM50 20a30 30 0 1 1 0 60 30 30 0 0 1 0-60Zm0 7a23 23 0 1 0 0 46 23 23 0 0 0 0-46ZM50 36a14 14 0 1 1 0 28 14 14 0 0 1 0-28Z\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 8a38 38 0 1 0 0 76 38 38 0 0 0 0-76ZM50 22a28 28 0 1 1 0 56 28 28 0 0 1 0-56Zm0 8a20 20 0 1 0 0 40 20 20 0 0 0 0-40Z\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 7a39 39 0 1 0 0 78 39 39 0 0 0 0-78ZM50 37a13 13 0 1 1 0 26 13 13 0 0 1 0-26Z\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" fill-rule=\"evenodd\" d=\"M50 4a46 46 0 1 1 0 92 46 46 0 0 1 0-92Zm0 7a39 39 0 1 0 0 78 39 39 0 0 0 0-78Z\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"#fff\" d=\"M8 45h84v10H8Z M45 8h10v84H45Z\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"8\" y=\"45\" width=\"84\" height=\"10\" fill=\"#fff\"/></svg>",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"8\" fill=\"#fff\"/></svg>",
+    ],
+  },
+];
+
+/**
+ * Busca um conjunto pelo id.
+ * @param {string} id
+ * @returns {ShapeSet|undefined}
+ */
+function findShapeSet(id) {
+  return SHAPE_SETS.find((s) => s.id === id);
+}
+return { SHAPE_SETS: SHAPE_SETS, findShapeSet: findShapeSet };
+})();
 /* ---------- js/shapes.js ---------- */
 __m["js/shapes.js"] = (function () {
+const { SHAPE_SETS } = __m["js/shape-sets.js"];
 /**
  * shapes.js — tudo que envolve SVG: as shapes padrão, rasterização,
  * tingimento e o cache de tints.
@@ -1149,6 +1268,8 @@ __m["js/shapes.js"] = (function () {
  * Não importa nada de `state.js` — recebe por parâmetro o que precisa saber.
  * É isso que permite testar este módulo isolado.
  */
+
+
 
 /**
  * Resolução em que cada shape é rasterizada antes de ser desenhada na célula.
@@ -1160,19 +1281,13 @@ const TINT_PX = 128;
 
 /**
  * Conjunto padrão: rampa monotônica de área preenchida, do highlight cheio
- * até o ponto quase invisível da sombra. Os mesmos arquivos estão em
- * `shapes/default/` — aqui eles ficam embutidos pra ferramenta funcionar
- * offline, sem fetch, com duplo clique.
+ * até o ponto quase invisível da sombra.
+ *
+ * Vem de `shape-sets.js`, que é gerado a partir de `shapes/default/`. Antes
+ * esta constante era escrita à mão em paralelo aos arquivos, e as duas cópias
+ * dessincronizavam.
  */
-const DEFAULT_SVG = [
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="13" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 10 90 50 50 90 10 50Z" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="#fff" fill-rule="evenodd" d="M50 12a38 38 0 1 1 0 76 38 38 0 0 1 0-76Zm0 16a22 22 0 1 0 0 44 22 22 0 0 0 0-44Z"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="36" y="36" width="28" height="28" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="7" fill="#fff"/></svg>`,
-];
+const DEFAULT_SVG = SHAPE_SETS[0].svgs;
 
 /* ---------------- parsing ---------------- */
 
@@ -2815,6 +2930,8 @@ const DICT = {
     'chk.invert': 'Quick invert mapping',
 
     'sec.states': '7-state midtone mapping',
+    'lbl.shapeSet': 'Conjunto de shapes',
+    'msg.setLoaded': 'conjunto "{name}" carregado',
     'btn.allWhite': 'Tudo branco',
     'btn.defaultShapes': 'Shapes padrão',
 
@@ -2951,6 +3068,8 @@ const DICT = {
     'chk.invert': 'Quick invert mapping',
 
     'sec.states': '7-state midtone mapping',
+    'lbl.shapeSet': 'Shape set',
+    'msg.setLoaded': '"{name}" set loaded',
     'btn.allWhite': 'All white',
     'btn.defaultShapes': 'Default shapes',
 
@@ -3259,6 +3378,7 @@ return { getTheme: getTheme, initTheme: initTheme, setTheme: setTheme, toggleThe
 __m["js/main.js"] = (function () {
 const { S, slots, N, STATE_META, set, subscribe, getPalette, setPalette } = __m["js/state.js"];
 const { DEFAULT_SVG, buildSlotImage, getTint, clearTints } = __m["js/shapes.js"];
+const { SHAPE_SETS, findShapeSet } = __m["js/shape-sets.js"];
 const { extractPalette, rgb2hex, spreadOverStates } = __m["js/palette.js"];
 const renderer = __m["js/renderer.js"];
 const exporter = __m["js/export.js"];
@@ -3274,6 +3394,7 @@ const { initI18n, t, onLangChange, getLang } = __m["js/i18n.js"];
  * negócio mora aqui — se aparecer matemática de imagem neste arquivo, ela
  * está no lugar errado.
  */
+
 
 
 
@@ -3441,18 +3562,53 @@ $('bAllWhite').addEventListener('click', () => {
   rebuildAll();
 });
 
-$('bReset').addEventListener('click', () => {
-  slots.forEach((s, i) => {
-    s.svgText = DEFAULT_SVG[i];
-    s.dirtyImg = true;
-    s.name = 'padrão';
-    s.on = true;
-    s.error = null;
+/* ================= conjuntos de shapes embutidos ================= */
+
+/** id do conjunto carregado por último, pra o seletor não mentir. */
+let currentSet = SHAPE_SETS[0].id;
+
+/**
+ * Carrega um conjunto embutido nos 7 estados.
+ *
+ * Os conjuntos vêm de `shape-sets.js`, gerado a partir das pastas de
+ * `shapes/`. Não dá pra buscar os arquivos em disco: a ferramenta abre de
+ * file://, sem servidor, e fetch nesse protocolo é bloqueado.
+ *
+ * @param {string} id
+ */
+function loadShapeSet(id) {
+  const set = findShapeSet(id);
+  if (!set) return;
+  currentSet = set.id;
+  slots.forEach((slot, i) => {
+    slot.svgText = set.svgs[i];
+    slot.dirtyImg = true;
+    slot.name = set.id;
+    slot.on = true;
+    slot.error = null;
     $('up' + i).classList.remove('has');
     syncSlotToggle(i);
   });
+  $('selSet').value = set.id;
   rebuildAll();
-});
+}
+
+/** Preenche o seletor, com os rótulos no idioma atual. */
+function buildSetOptions() {
+  const sel = $('selSet');
+  sel.innerHTML = '';
+  for (const set of SHAPE_SETS) {
+    const opt = document.createElement('option');
+    opt.value = set.id;
+    opt.textContent = set.labels[getLang()] || set.labels.en;
+    sel.appendChild(opt);
+  }
+  sel.value = currentSet;
+}
+
+$('selSet').addEventListener('change', (e) => loadShapeSet(e.target.value));
+
+$('bReset').addEventListener('click', () => loadShapeSet(currentSet));
 
 /* ================= sliders e checkboxes ================= */
 
@@ -3806,6 +3962,7 @@ function syncUI() {
  * alcança, porque é gerado em JS ou depende do estado atual.
  */
 function syncDynamicText() {
+  buildSetOptions();
   syncStateLabels();
   syncRatioButton();
   syncPlayButton();

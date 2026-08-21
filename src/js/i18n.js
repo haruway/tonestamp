@@ -54,6 +54,8 @@ const DICT = {
     'chk.invert': 'Quick invert mapping',
 
     'sec.states': '7-state midtone mapping',
+    'lbl.shapeSet': 'Conjunto de shapes',
+    'msg.setLoaded': 'conjunto "{name}" carregado',
     'btn.allWhite': 'Tudo branco',
     'btn.defaultShapes': 'Shapes padrão',
 
@@ -190,6 +192,8 @@ const DICT = {
     'chk.invert': 'Quick invert mapping',
 
     'sec.states': '7-state midtone mapping',
+    'lbl.shapeSet': 'Shape set',
+    'msg.setLoaded': '"{name}" set loaded',
     'btn.allWhite': 'All white',
     'btn.defaultShapes': 'Default shapes',
 

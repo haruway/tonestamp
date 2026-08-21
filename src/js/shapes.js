@@ -7,6 +7,8 @@
  * É isso que permite testar este módulo isolado.
  */
 
+import { SHAPE_SETS } from './shape-sets.js';
+
 /**
  * Resolução em que cada shape é rasterizada antes de ser desenhada na célula.
  * 128px cobre com folga o tamanho de célula usado na prática (o export vai até
@@ -17,19 +19,13 @@ export const TINT_PX = 128;
 
 /**
  * Conjunto padrão: rampa monotônica de área preenchida, do highlight cheio
- * até o ponto quase invisível da sombra. Os mesmos arquivos estão em
- * `shapes/default/` — aqui eles ficam embutidos pra ferramenta funcionar
- * offline, sem fetch, com duplo clique.
+ * até o ponto quase invisível da sombra.
+ *
+ * Vem de `shape-sets.js`, que é gerado a partir de `shapes/default/`. Antes
+ * esta constante era escrita à mão em paralelo aos arquivos, e as duas cópias
+ * dessincronizavam.
  */
-export const DEFAULT_SVG = [
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="13" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 10 90 50 50 90 10 50Z" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="#fff" fill-rule="evenodd" d="M50 12a38 38 0 1 1 0 76 38 38 0 0 1 0-76Zm0 16a22 22 0 1 0 0 44 22 22 0 0 0 0-44Z"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="36" y="36" width="28" height="28" fill="#fff"/></svg>`,
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="7" fill="#fff"/></svg>`,
-];
+export const DEFAULT_SVG = SHAPE_SETS[0].svgs;
 
 /* ---------------- parsing ---------------- */
 

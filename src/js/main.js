@@ -9,6 +9,7 @@
 
 import { S, slots, N, STATE_META, set, subscribe, getPalette, setPalette } from './state.js';
 import { DEFAULT_SVG, buildSlotImage, getTint, clearTints } from './shapes.js';
+import { SHAPE_SETS, findShapeSet } from './shape-sets.js';
 import { extractPalette, rgb2hex, spreadOverStates } from './palette.js';
 import * as renderer from './renderer.js';
 import * as exporter from './export.js';
@@ -173,18 +174,53 @@ $('bAllWhite').addEventListener('click', () => {
   rebuildAll();
 });
 
-$('bReset').addEventListener('click', () => {
-  slots.forEach((s, i) => {
-    s.svgText = DEFAULT_SVG[i];
-    s.dirtyImg = true;
-    s.name = 'padrão';
-    s.on = true;
-    s.error = null;
+/* ================= conjuntos de shapes embutidos ================= */
+
+/** id do conjunto carregado por último, pra o seletor não mentir. */
+let currentSet = SHAPE_SETS[0].id;
+
+/**
+ * Carrega um conjunto embutido nos 7 estados.
+ *
+ * Os conjuntos vêm de `shape-sets.js`, gerado a partir das pastas de
+ * `shapes/`. Não dá pra buscar os arquivos em disco: a ferramenta abre de
+ * file://, sem servidor, e fetch nesse protocolo é bloqueado.
+ *
+ * @param {string} id
+ */
+function loadShapeSet(id) {
+  const set = findShapeSet(id);
+  if (!set) return;
+  currentSet = set.id;
+  slots.forEach((slot, i) => {
+    slot.svgText = set.svgs[i];
+    slot.dirtyImg = true;
+    slot.name = set.id;
+    slot.on = true;
+    slot.error = null;
     $('up' + i).classList.remove('has');
     syncSlotToggle(i);
   });
+  $('selSet').value = set.id;
   rebuildAll();
-});
+}
+
+/** Preenche o seletor, com os rótulos no idioma atual. */
+function buildSetOptions() {
+  const sel = $('selSet');
+  sel.innerHTML = '';
+  for (const set of SHAPE_SETS) {
+    const opt = document.createElement('option');
+    opt.value = set.id;
+    opt.textContent = set.labels[getLang()] || set.labels.en;
+    sel.appendChild(opt);
+  }
+  sel.value = currentSet;
+}
+
+$('selSet').addEventListener('change', (e) => loadShapeSet(e.target.value));
+
+$('bReset').addEventListener('click', () => loadShapeSet(currentSet));
 
 /* ================= sliders e checkboxes ================= */
 
@@ -538,6 +574,7 @@ function syncUI() {
  * alcança, porque é gerado em JS ou depende do estado atual.
  */
 function syncDynamicText() {
+  buildSetOptions();
   syncStateLabels();
   syncRatioButton();
   syncPlayButton();

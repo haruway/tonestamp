@@ -31,6 +31,16 @@ jobs:
       # Não existe `npm install`: o projeto é zero-dependência por decisão de
       # produto, e o build é Node puro.
 
+      - name: Verificar se shape-sets.js reflete as pastas de shapes/
+        run: |
+          node scripts/gen-shape-sets.mjs --check || {
+            echo ""
+            echo "::error::src/js/shape-sets.js está desatualizado."
+            echo "As pastas em shapes/ são a fonte da verdade. Rode"
+            echo "'node scripts/gen-shape-sets.mjs' e faça commit do resultado."
+            exit 1
+          }
+
       - name: Verificar se o dist commitado está em dia
         run: |
           node scripts/build.mjs --check || {

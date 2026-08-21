@@ -63,6 +63,23 @@ Sete linhas, do highlight à sombra:
 | 6 · Dark mid | | |
 | 7 · Shadows (100%) | mais escuro | shape mais leve / menos área, ou nada |
 
+**Conjunto de shapes**, no topo da seção, carrega um dos quatro conjuntos
+embutidos num clique:
+
+| Conjunto | Estratégia | Rampa |
+|---|---|---|
+| **Padrão · densidade** | sete shapes diferentes | 66,5 → 1,5% |
+| **Pontos · por tamanho** | um círculo, sete raios | 66,5 → 0,8% |
+| **Blocos · quadrados** | quadrados, célula cheia no highlight | 100 → 1,4% |
+| **Complexidade** | anéis aninhados até um ponto | 38,9 → 2,0% |
+
+Os conjuntos ficam embutidos no arquivo, não são buscados — a ferramenta abre
+de `file://`, sem servidor, então não há de onde buscar. Eles são gerados a
+partir das pastas em [`shapes/`](../shapes/), que continuam lá como `.svg` pra
+você abrir no Illustrator.
+
+**Shapes padrão** recarrega o conjunto que estiver selecionado.
+
 Cada linha tem três controles:
 
 - **Quadradinho de cor** à esquerda: a cor daquela faixa. Só tem efeito no modo de cor `Estado`.

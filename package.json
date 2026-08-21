@@ -12,7 +12,8 @@
     "contrast": "node scripts/contrast.mjs",
     "serve": "python3 -m http.server 8080 --directory src",
     "ramp": "node scripts/check-ramp.mjs",
-    "verify": "node scripts/build.mjs --check && node scripts/contrast.mjs && node scripts/check-ramp.mjs"
+    "verify": "node scripts/gen-shape-sets.mjs --check && node scripts/build.mjs --check && node scripts/contrast.mjs && node scripts/check-ramp.mjs",
+    "shapes": "node scripts/gen-shape-sets.mjs"
   },
   "engines": {
     "node": ">=18"

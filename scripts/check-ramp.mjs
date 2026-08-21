@@ -7,13 +7,13 @@
  * escrito em docs/shape-design.md como o erro mais comum, e mesmo assim o
  * conjunto original tinha duas inversões. Daí este script existir.
  *
- * Também confere que os arquivos em shapes/default/ batem com a constante
- * DEFAULT_SVG de src/js/shapes.js. Os dois existem de propósito — o código
- * embute pra rodar offline, os arquivos servem pra abrir no Illustrator — e é
- * fácil mexer num e esquecer do outro.
+ * As pastas são a fonte da verdade: src/js/shape-sets.js é GERADO a partir
+ * delas por scripts/gen-shape-sets.mjs, então não existe mais o risco de o
+ * código e os arquivos divergirem. Quem garante que o gerado está em dia é
+ * `node scripts/gen-shape-sets.mjs --check`.
  *
  * Uso: node scripts/check-ramp.mjs
- * Sai com 1 se a rampa inverter ou se os arquivos divergirem do código.
+ * Sai com 1 se a rampa de qualquer conjunto inverter.
  *
  * A área sai de cálculo geométrico, não de rasterização: arcos são achatados
  * em segmentos de reta e o polígono resultante vai pra fórmula do shoelace.
@@ -27,7 +27,6 @@ import { dirname, join } from 'node:path';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SHAPES_ROOT = join(ROOT, 'shapes');
 const SHAPES_DIR = join(SHAPES_ROOT, 'default');
-const SHAPES_JS = join(ROOT, 'src', 'js', 'shapes.js');
 
 /** Segmentos por arco no achatamento. */
 const ARC_STEPS = 720;
@@ -266,9 +265,6 @@ if (files.length !== 7) {
   process.exit(1);
 }
 
-const shapesJs = await readFile(SHAPES_JS, 'utf8');
-const embedded = [...shapesJs.matchAll(/`(<svg[\s\S]*?<\/svg>)`/g)].map((m) => m[1]);
-
 let failures = 0;
 const rows = [];
 
@@ -296,27 +292,6 @@ for (let i = 0; i < files.length; i++) {
   );
   rows.push({ file: files[i], pct });
   previous = pct;
-}
-
-/* os arquivos têm que bater com a constante embutida no código */
-console.log('\n  arquivos × constante DEFAULT_SVG');
-console.log('  ' + '-'.repeat(68));
-if (embedded.length !== 7) {
-  console.error(`  XX  achei ${embedded.length} svg em src/js/shapes.js, esperava 7`);
-  failures++;
-} else {
-  const norm = (s) => s.replace(/\s+/g, ' ').replace(/\s*(width|height)="[^"]*"/g, '').trim();
-  for (let i = 0; i < 7; i++) {
-    const fileSvg = norm((await readFile(join(SHAPES_DIR, files[i]), 'utf8')).trim());
-    const codeSvg = norm(embedded[i]);
-    const same = fileSvg === codeSvg;
-    if (!same) failures++;
-    console.log(`  ${same ? 'ok' : 'XX'}  ${files[i]}`);
-    if (!same) {
-      console.log(`        arquivo: ${fileSvg.slice(0, 90)}`);
-      console.log(`        código:  ${codeSvg.slice(0, 90)}`);
-    }
-  }
 }
 
 /* qualquer outro conjunto em shapes/ também precisa ser monotônico */
@@ -369,4 +344,4 @@ if (failures) {
   );
   process.exit(1);
 }
-console.log('  rampa monotônica e arquivos em sincronia com o código.\n');
+console.log('  todas as rampas são monotônicas.\n');
