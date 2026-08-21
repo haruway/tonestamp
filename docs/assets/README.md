@@ -12,9 +12,9 @@ one of the missing ones, make **#1**.
 | 1 | `demo.gif` | ❌ **missing** | 🔥🔥🔥 the single highest-impact asset |
 | 2 | `hero-still.png` | ❌ missing | 🔥🔥🔥 |
 | 3 | `modes-*.png` | ❌ missing | 🔥🔥 |
-| 4 | `ui-dark.png` | ✅ generated | 🔥🔥 |
-| 5 | `shape-ramp.png` | ✅ generated | 🔥🔥 |
-| 6 | `ui-light.png` | ✅ generated | 🔥 |
+| 4 | `ui-dark-{en,pt}.png` | ✅ generated | 🔥🔥 |
+| 5 | `shape-ramp-{en,pt}.png` | ✅ generated | 🔥🔥 |
+| 6 | `ui-light-{en,pt}.png` | ✅ generated | 🔥 |
 | 7 | `svg-illustrator.png` | ❌ missing | 🔥 |
 
 Items 4, 5 and 6 were rendered straight from the repository with headless
@@ -87,10 +87,14 @@ explains in fifty words.
 between them the comparison is worthless. Export PNG at 1000px for each,
 changing only the mode.
 
-## 4 · `ui-dark.png` ✅ done
+## 4 · `ui-dark-en.png` / `ui-dark-pt.png` ✅ done
 
 The full interface, dark theme, running the built-in test gradient. Sits right
 under the badges as the first thing on the page.
+
+**Two versions, one per language.** `README.md` shows the English capture and
+`README.pt-BR.md` the Portuguese one — a reader should never land on a page in
+their language and see a screenshot in another.
 
 Regenerate after a layout change:
 
@@ -99,7 +103,7 @@ node scripts/build.mjs
 # then render dist/index.html at 1440×900 with a 2x device scale factor
 ```
 
-## 5 · `shape-ramp.png` ✅ done
+## 5 · `shape-ramp-en.png` / `shape-ramp-pt.png` ✅ done
 
 The seven default shapes in a row with their filled-area percentages, and the
 same row heavily blurred underneath.
@@ -108,7 +112,7 @@ This is the best single explanation of the core idea, because the blurred row
 *is* the squint test — you can see it resolve into a clean gradient. It carries
 the "monotonic ramp" argument better than any paragraph.
 
-## 6 · `ui-light.png` ✅ done
+## 6 · `ui-light-en.png` / `ui-light-pt.png` ✅ done
 
 The interface in the light theme, English, with the composition background
 still black.

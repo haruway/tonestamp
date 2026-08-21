@@ -13,7 +13,7 @@ Meio-tom tonal que lê a luminância de cada célula do grid e carimba no lugar 
   ![Tonestamp em funcionamento](docs/assets/demo.gif)
 -->
 
-![A interface do Tonestamp](docs/assets/ui-dark.png)
+![A interface do Tonestamp](docs/assets/ui-dark-pt.png)
 
 **[Demo ao vivo →](https://haruway.github.io/tonestamp/)**
 
@@ -29,7 +29,7 @@ São sete estados porque a imagem se forma por **luminância**, não por cor. A 
 
 Tudo depende de uma regra só: as sete shapes precisam formar uma **rampa monotônica de área preenchida**. Quebre a rampa e o rosto some.
 
-![As sete shapes padrão, e a mesma fileira desfocada mostrando um degradê limpo](docs/assets/shape-ramp.png)
+![As sete shapes padrão, e a mesma fileira desfocada mostrando um degradê limpo](docs/assets/shape-ramp-pt.png)
 
 A fileira de baixo é o teste do olho semicerrado: desfoque o conjunto e ele tem que virar um degradê suave, sem nenhum degrau na direção errada. O raciocínio está em [docs/shape-design.pt-BR.md](docs/shape-design.pt-BR.md), e o `npm run ramp` mede isso pra que uma regressão não passe.
 
@@ -52,6 +52,10 @@ A fileira de baixo é o teste do olho semicerrado: desfoque o conjunto e ele tem
 - **Presets.** Salva a configuração inteira como JSON, com as shapes embutidas como texto pro arquivo ser portátil. Quatro exemplos prontos em [`examples/`](examples/).
 - **Português e inglês**, alternáveis no cabeçalho.
 - **Temas escuro e claro**, lembrados entre sessões, seguindo a preferência do sistema na primeira visita. O tema da interface é totalmente independente da cor de fundo da composição.
+
+![A mesma ferramenta no tema claro, com o fundo da composição ainda preto](docs/assets/ui-light-pt.png)
+
+Repare que a composição continua preta enquanto a interface fica clara. As duas coisas são independentes de propósito — a cor de fundo da sua arte é decisão sua, não efeito colateral do tema em que você lê o painel.
 
 ## Traga suas próprias shapes
 

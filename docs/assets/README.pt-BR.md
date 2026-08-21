@@ -12,9 +12,9 @@ só for fazer uma das que faltam, faça a **#1**.
 | 1 | `demo.gif` | ❌ **falta** | 🔥🔥🔥 de longe o mais importante |
 | 2 | `hero-still.png` | ❌ falta | 🔥🔥🔥 |
 | 3 | `modes-*.png` | ❌ falta | 🔥🔥 |
-| 4 | `ui-dark.png` | ✅ gerado | 🔥🔥 |
-| 5 | `shape-ramp.png` | ✅ gerado | 🔥🔥 |
-| 6 | `ui-light.png` | ✅ gerado | 🔥 |
+| 4 | `ui-dark-{en,pt}.png` | ✅ gerado | 🔥🔥 |
+| 5 | `shape-ramp-{en,pt}.png` | ✅ gerado | 🔥🔥 |
+| 6 | `ui-light-{en,pt}.png` | ✅ gerado | 🔥 |
 | 7 | `svg-illustrator.png` | ❌ falta | 🔥 |
 
 Os itens 4, 5 e 6 foram renderizados direto do repositório com Chrome headless
@@ -86,10 +86,14 @@ Recursos explica em cinquenta palavras.
 entre eles, a comparação não vale nada. Export PNG a 1000px em cada um,
 trocando só o modo.
 
-## 4 · `ui-dark.png` ✅ pronto
+## 4 · `ui-dark-en.png` / `ui-dark-pt.png` ✅ pronto
 
 A interface inteira, tema escuro, rodando o gradiente de teste embutido. Fica
 logo abaixo dos badges, como a primeira coisa da página.
+
+**Duas versões, uma por idioma.** O `README.md` mostra a captura em inglês e o
+`README.pt-BR.md` a em português — ninguém deve cair numa página no idioma dele
+e ver um print em outro.
 
 Pra regerar depois de mudar layout:
 
@@ -98,7 +102,7 @@ node scripts/build.mjs
 # depois renderize dist/index.html em 1440×900 com device scale factor 2x
 ```
 
-## 5 · `shape-ramp.png` ✅ pronto
+## 5 · `shape-ramp-en.png` / `shape-ramp-pt.png` ✅ pronto
 
 As sete shapes padrão em fileira com a porcentagem de área preenchida, e a
 mesma fileira bem desfocada embaixo.
@@ -107,7 +111,7 @@ mesma fileira bem desfocada embaixo.
 o teste do olho semicerrado — dá pra ver ela virando um degradê limpo. Sustenta
 o argumento da "rampa monotônica" melhor que qualquer parágrafo.
 
-## 6 · `ui-light.png` ✅ pronto
+## 6 · `ui-light-en.png` / `ui-light-pt.png` ✅ pronto
 
 A interface no tema claro, em inglês, com o fundo da composição ainda preto.
 

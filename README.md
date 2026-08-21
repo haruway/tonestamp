@@ -13,7 +13,7 @@ Tonal halftone that reads the luminance of each grid cell and stamps a custom SV
   ![Tonestamp in action](docs/assets/demo.gif)
 -->
 
-![The Tonestamp interface](docs/assets/ui-dark.png)
+![The Tonestamp interface](docs/assets/ui-dark-en.png)
 
 **[Live demo →](https://haruway.github.io/tonestamp/)**
 
@@ -29,7 +29,7 @@ Seven states exist because the image is built from **luminance**, not colour. Co
 
 The whole thing depends on one rule: the seven shapes must form a **monotonic ramp of filled area**. Break the ramp and the face disappears.
 
-![The seven default shapes, and the same row blurred to show a clean gradient](docs/assets/shape-ramp.png)
+![The seven default shapes, and the same row blurred to show a clean gradient](docs/assets/shape-ramp-en.png)
 
 That bottom row is the squint test: blur the set and it has to read as a smooth gradient, with no step going the wrong way. The reasoning is written up in [docs/shape-design.md](docs/shape-design.md), and `npm run ramp` measures it so a regression cannot ship.
 
@@ -52,6 +52,10 @@ That is the whole thing. No npm, no server, no dependencies, and **no network** 
 - **Presets.** Save the entire configuration as JSON, shapes embedded as text so the file is portable. Four worked examples in [`examples/`](examples/).
 - **Portuguese and English**, switchable in the header.
 - **Dark and light themes**, remembered across sessions, following your OS preference on first visit. The UI theme is fully independent of the composition's background colour.
+
+![The same tool in the light theme, with the composition background still black](docs/assets/ui-light-en.png)
+
+Note the composition stays black while the interface goes light. Those two are separate settings, on purpose — the background colour of your artwork is your decision, not a side effect of the theme you read the panel in.
 
 ## Bring your own shapes
 
