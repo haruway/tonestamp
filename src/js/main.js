@@ -417,8 +417,12 @@ sources.onChange((info) => {
   showSourceMessage('');
   syncSourceTag();
   updatePerfWarning();
-  // pequeno atraso: com vídeo, o primeiro quadro pode não estar pronto
-  if (S.autoPal) setTimeout(doExtract, 60);
+  // Extração automática só PREENCHE os swatches, não aplica nos estados.
+  // Aplicar aqui sobrescreveria as sete cores escolhidas na mão toda vez que
+  // uma fonte nova entrasse — e no boot deixava tudo cinza. Quem aplica é o
+  // botão "Extrair e aplicar", que é ação explícita.
+  // Pequeno atraso: com vídeo, o primeiro quadro pode não estar pronto.
+  if (S.autoPal) setTimeout(() => doExtract(false), 60);
 });
 
 /** Escreve o rótulo da fonte ativa no canto do stage. */

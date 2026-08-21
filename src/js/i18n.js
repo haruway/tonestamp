@@ -73,7 +73,7 @@ const DICT = {
     'sw.copied': 'copiado',
     'btn.extract': 'Extrair e aplicar',
     'btn.apply': 'Aplicar nos estados',
-    'chk.autoPal': 'Extrair ao trocar de fonte',
+    'chk.autoPal': 'Extrair paleta ao trocar de fonte',
     'lbl.sat': 'Saturação',
 
     'sec.scale': 'Escala e rotação',
@@ -211,7 +211,7 @@ const DICT = {
     'sw.copied': 'copied',
     'btn.extract': 'Extract and apply',
     'btn.apply': 'Apply to states',
-    'chk.autoPal': 'Extract on source change',
+    'chk.autoPal': 'Extract palette on source change',
     'lbl.sat': 'Saturation',
 
     'sec.scale': 'Scale and rotation',

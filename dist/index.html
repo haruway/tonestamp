@@ -2949,7 +2949,7 @@ const DICT = {
     'sw.copied': 'copiado',
     'btn.extract': 'Extrair e aplicar',
     'btn.apply': 'Aplicar nos estados',
-    'chk.autoPal': 'Extrair ao trocar de fonte',
+    'chk.autoPal': 'Extrair paleta ao trocar de fonte',
     'lbl.sat': 'Saturação',
 
     'sec.scale': 'Escala e rotação',
@@ -3087,7 +3087,7 @@ const DICT = {
     'sw.copied': 'copied',
     'btn.extract': 'Extract and apply',
     'btn.apply': 'Apply to states',
-    'chk.autoPal': 'Extract on source change',
+    'chk.autoPal': 'Extract palette on source change',
     'lbl.sat': 'Saturation',
 
     'sec.scale': 'Scale and rotation',
@@ -3805,8 +3805,12 @@ sources.onChange((info) => {
   showSourceMessage('');
   syncSourceTag();
   updatePerfWarning();
-  // pequeno atraso: com vídeo, o primeiro quadro pode não estar pronto
-  if (S.autoPal) setTimeout(doExtract, 60);
+  // Extração automática só PREENCHE os swatches, não aplica nos estados.
+  // Aplicar aqui sobrescreveria as sete cores escolhidas na mão toda vez que
+  // uma fonte nova entrasse — e no boot deixava tudo cinza. Quem aplica é o
+  // botão "Extrair e aplicar", que é ação explícita.
+  // Pequeno atraso: com vídeo, o primeiro quadro pode não estar pronto.
+  if (S.autoPal) setTimeout(() => doExtract(false), 60);
 });
 
 /** Escreve o rótulo da fonte ativa no canto do stage. */
