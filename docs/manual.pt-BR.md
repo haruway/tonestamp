@@ -71,6 +71,7 @@ embutidos num clique:
 | **Padrão · densidade** | sete shapes diferentes | 66,5 → 1,5% |
 | **Pontos · por tamanho** | um círculo, sete raios | 66,5 → 0,8% |
 | **Blocos · quadrados** | quadrados, célula cheia no highlight | 100 → 1,4% |
+| **Bitmap 4×4 · dithering** | sub-grid 4×4, células preenchidas em ordem de Bayer | 100 → 6,3% |
 | **Complexidade** | anéis aninhados até um ponto | 38,9 → 2,0% |
 
 Os conjuntos ficam embutidos no arquivo, não são buscados — a ferramenta abre

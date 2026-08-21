@@ -48,6 +48,35 @@ Os degraus aqui são muito mais bem distribuídos que no `default/`, então os
 meios-tons ficam mais suaves. Carregue num clique com o preset
 [`blocos.json`](../examples/blocos.json).
 
+## `bitmap-4/`
+
+Não é uma shape que encolhe — é um **sub-grid 4×4 cujas células vão sendo
+preenchidas**. É dithering ordenado clássico, e é o que produz aquele aspecto
+duro, impresso, de contraste máximo: o estado 1 é a célula totalmente sólida,
+sem folga nenhuma, então as células vizinhas se fundem em preto contínuo.
+
+| Arquivo | Células | Área preenchida |
+|---|---|---|
+| `01-highlights-16de16.svg` | 16/16 | 100,0% |
+| `02-light-mid-12de16.svg` | 12/16 | 75,0% |
+| `03-mid-high-10de16.svg` | 10/16 | 62,5% |
+| `04-midtones-08de16.svg` | 8/16 | 50,0% |
+| `05-mid-low-05de16.svg` | 5/16 | 31,3% |
+| `06-dark-mid-03de16.svg` | 3/16 | 18,8% |
+| `07-shadows-01de16.svg` | 1/16 | 6,3% |
+
+A **ordem** de preenchimento é o truque inteiro: as células entram seguindo uma
+matriz de limiar de Bayer 4×4, então todo nível fica disperso e opticamente
+centrado. Preencha em bloco e você tem um borrão encolhendo — que é
+exatamente o que o `blocks/` já faz.
+
+O tamanho do sub-grid importa mais do que parece. Um 3×3 só tem três níveis
+simétricos (1, 5 e 9 células) e são necessários sete, então os meios-tons saem
+tortos e empurram uma direção falsa pela imagem inteira. O 4×4 tem níveis
+suficientes pra ficar equilibrado em todo passo.
+
+Quer o 100% vazio também? Desligue o estado 7.
+
 ## Desenhando o seu próprio conjunto
 
 A explicação longa — peso óptico, por que a rampa tem que ser monotônica, quais

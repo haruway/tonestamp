@@ -71,6 +71,7 @@ one click:
 | **Default · density** | seven different shapes | 66.5 → 1.5% |
 | **Dots · by size** | one circle, seven radii | 66.5 → 0.8% |
 | **Blocks · squares** | squares, full cell at the highlight end | 100 → 1.4% |
+| **Bitmap 4×4 · dither** | a 4×4 sub-grid, cells filled in Bayer order | 100 → 6.3% |
 | **Complexity** | nested rings down to a dot | 38.9 → 2.0% |
 
 The sets are embedded in the file, not fetched — the tool opens from `file://`

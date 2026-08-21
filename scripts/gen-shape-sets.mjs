@@ -33,10 +33,11 @@ const LABELS = {
   dots: { pt: 'Pontos · por tamanho', en: 'Dots · by size' },
   blocks: { pt: 'Blocos · quadrados', en: 'Blocks · squares' },
   complexity: { pt: 'Complexidade', en: 'Complexity' },
+  'bitmap-4': { pt: 'Bitmap 4×4 · dithering', en: 'Bitmap 4×4 · dither' },
 };
 
 /** Ordem em que aparecem no seletor. */
-const ORDER = ['default', 'dots', 'blocks', 'complexity'];
+const ORDER = ['default', 'dots', 'blocks', 'bitmap-4', 'complexity'];
 
 /**
  * Normaliza o SVG pro formato embutido: uma linha só, e sem width/height na

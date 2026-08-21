@@ -47,6 +47,35 @@ The steps here are far more evenly spaced than in `default/`, so midtones read
 smoother. Load it in one click with the [`blocos.json`](../examples/blocos.json)
 preset.
 
+## `bitmap-4/`
+
+Not a shape that shrinks — a **4×4 sub-grid whose cells fill up**. This is
+classic ordered dithering, and it is what produces the hard, printed,
+maximum-contrast look: state 1 is a fully solid cell with no gap at all, so
+neighbouring cells merge into unbroken black.
+
+| File | Cells | Filled area |
+|---|---|---|
+| `01-highlights-16de16.svg` | 16/16 | 100.0% |
+| `02-light-mid-12de16.svg` | 12/16 | 75.0% |
+| `03-mid-high-10de16.svg` | 10/16 | 62.5% |
+| `04-midtones-08de16.svg` | 8/16 | 50.0% |
+| `05-mid-low-05de16.svg` | 5/16 | 31.3% |
+| `06-dark-mid-03de16.svg` | 3/16 | 18.8% |
+| `07-shadows-01de16.svg` | 1/16 | 6.3% |
+
+The fill **order** is the whole trick: cells are added following a Bayer 4×4
+threshold matrix, so every level stays dispersed and optically centred. Fill
+them in a clustered order instead and you get a shrinking blob — which is what
+`blocks/` already is.
+
+Sub-grid size matters more than it looks. A 3×3 only has three symmetric levels
+(1, 5 and 9 cells) and you need seven, so its midtones come out lopsided and
+push a false direction across the image. 4×4 has enough levels to stay balanced
+at every step.
+
+Want a true 100% empty as well? Switch state 7 off.
+
 ## Drawing your own set
 
 The long version — optical weight, why the ramp has to be monotonic, which
