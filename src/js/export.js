@@ -187,11 +187,56 @@ export function exportSVG() {
   return null;
 }
 
-/* ---------------- WebM ---------------- */
+/* ---------------- gravação de vídeo ---------------- */
 
 /** @type {MediaRecorder|null} */
 let rec = null;
 let chunks = [];
+
+/** Quadros por segundo da captura. */
+const REC_FPS = 30;
+
+/**
+ * Formatos tentados em ordem de preferência.
+ *
+ * MP4 primeiro porque é o que abre em qualquer lugar sem conversor — Premiere,
+ * DaVinci, Instagram, WhatsApp. O Chrome expõe H.264 no MediaRecorder desde a
+ * 126 e o Safari também, então na prática a maioria das pessoas recebe MP4.
+ * WebM fica de reserva pra quem não tiver H.264 disponível.
+ */
+const REC_FORMATS = [
+  { mime: 'video/mp4;codecs=avc1.640028', ext: 'mp4' },
+  { mime: 'video/mp4;codecs=avc1.42E01E', ext: 'mp4' },
+  { mime: 'video/mp4', ext: 'mp4' },
+  { mime: 'video/webm;codecs=vp9', ext: 'webm' },
+  { mime: 'video/webm;codecs=vp8', ext: 'webm' },
+  { mime: 'video/webm', ext: 'webm' },
+];
+
+/** @returns {{mime:string, ext:string}|null} primeiro formato suportado */
+function pickFormat() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  for (const f of REC_FORMATS) {
+    if (MediaRecorder.isTypeSupported(f.mime)) return f;
+  }
+  return null;
+}
+
+/**
+ * Taxa de bits proporcional à área do canvas.
+ *
+ * O conteúdo aqui é de borda dura e cor chapada, que é justamente o que mais
+ * sofre com compressão: bitrate baixo espalha sujeira em volta de cada shape.
+ * 0,25 bit por pixel por quadro segura as bordas limpas; o teto de 40 Mb/s
+ * evita arquivo absurdo em 3000px.
+ *
+ * @param {number} w
+ * @param {number} h
+ */
+function bitrateFor(w, h) {
+  const bits = w * h * REC_FPS * 0.25;
+  return Math.round(Math.min(40e6, Math.max(10e6, bits)));
+}
 
 /** @returns {boolean} se está gravando agora */
 export function isRecording() {
@@ -199,12 +244,27 @@ export function isRecording() {
 }
 
 /**
+ * Descreve o que a gravação vai produzir, pra mostrar na interface antes de
+ * alguém clicar.
+ * @param {number} w
+ * @param {number} h
+ * @returns {{ext:string, mbps:number, fps:number}|null}
+ */
+export function recordingInfo(w, h) {
+  const fmt = pickFormat();
+  if (!fmt || !out || !out.captureStream) return null;
+  return { ext: fmt.ext, mbps: Math.round(bitrateFor(w, h) / 1e5) / 10, fps: REC_FPS };
+}
+
+/**
  * Liga ou desliga a gravação do canvas.
  *
- * Safari não implementa MediaRecorder pra canvas.captureStream, então lá isso
- * simplesmente não existe — é limitação do navegador, não da ferramenta.
+ * Antes isto falhava calado: erro do MediaRecorder não era tratado, e se
+ * nenhum dado chegasse ele ainda assim baixava um arquivo de zero byte. Quem
+ * testava via "não funciona" sem nenhuma pista. Agora todo caminho de falha
+ * chega na interface com motivo.
  *
- * @param {(state:'recording'|'stopped'|'unsupported', message?:string) => void} onState
+ * @param {(state:'recording'|'stopped'|'error', detail?:{key:string, vars?:object}) => void} onState
  */
 export function toggleRecording(onState) {
   if (isRecording()) {
@@ -213,31 +273,56 @@ export function toggleRecording(onState) {
   }
   if (!out) return;
 
+  const fmt = pickFormat();
+  if (!fmt || !out.captureStream) {
+    onState('error', { key: 'err.rec.unsupported' });
+    return;
+  }
+
   try {
-    if (typeof MediaRecorder === 'undefined' || !out.captureStream) {
-      onState('unsupported', 'WebM não suportado neste navegador');
+    const stream = out.captureStream(REC_FPS);
+    if (!stream || !stream.getVideoTracks().length) {
+      onState('error', { key: 'err.rec.noStream' });
       return;
     }
-    const stream = out.captureStream(30);
-    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-      ? 'video/webm;codecs=vp9'
-      : 'video/webm';
-    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12000000 });
+
+    rec = new MediaRecorder(stream, {
+      mimeType: fmt.mime,
+      videoBitsPerSecond: bitrateFor(out.width, out.height),
+    });
     chunks = [];
+
     rec.ondataavailable = (e) => {
-      if (e.data.size) chunks.push(e.data);
+      if (e.data && e.data.size) chunks.push(e.data);
     };
-    rec.onstop = () => {
-      const url = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
-      download(url, filename('webm'), true);
-      chunks = [];
+
+    rec.onerror = (e) => {
+      const name = (e && e.error && e.error.name) || '?';
       rec = null;
+      chunks = [];
+      onState('error', { key: 'err.rec.failed', vars: { name } });
+    };
+
+    rec.onstop = () => {
+      rec = null;
+      if (!chunks.length) {
+        // sem nenhum quadro: aconteceu ao gravar com a aba escondida, quando o
+        // loop de render para e o canvas deixa de mudar
+        onState('error', { key: 'err.rec.empty' });
+        return;
+      }
+      const url = URL.createObjectURL(new Blob(chunks, { type: fmt.mime }));
+      download(url, filename(fmt.ext), true);
+      chunks = [];
       onState('stopped');
     };
-    rec.start();
+
+    // timeslice: os dados chegam a cada segundo em vez de tudo no fim, então
+    // uma interrupção não leva a gravação inteira junto
+    rec.start(1000);
     onState('recording');
   } catch (err) {
     rec = null;
-    onState('unsupported', 'WebM não suportado neste navegador');
+    onState('error', { key: 'err.rec.failed', vars: { name: (err && err.name) || '?' } });
   }
 }
